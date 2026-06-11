@@ -17,10 +17,10 @@ export function getConfiguredProviders(
 	const configured: ApiProvider[] = []
 
 	if (!apiConfiguration) {
-		return ["cline"] // Cline is always available
+		return ["cline"] // FenneQ is always available
 	}
 
-	// Cline - always available (uses account-based auth)
+	// FenneQ - always available (uses account-based auth)
 	configured.push("cline")
 
 	// Anthropic - requires API key

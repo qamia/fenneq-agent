@@ -13,12 +13,12 @@ interface ClineProviderProps {
 }
 
 /**
- * The Cline provider configuration component
+ * The FenneQ provider configuration component
  */
 export const ClineProvider = ({ showModelOptions, isPopup, currentMode, initialModelTab }: ClineProviderProps) => {
 	return (
 		<div>
-			{/* Cline Account Info Card */}
+			{/* FenneQ Account Info Card */}
 			<div style={{ marginBottom: 14, marginTop: 4 }}>
 				<ClineAccountInfoCard />
 			</div>

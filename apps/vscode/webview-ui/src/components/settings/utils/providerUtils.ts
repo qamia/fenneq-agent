@@ -571,7 +571,7 @@ export function getModeSpecificFields(apiConfiguration: ApiConfiguration | undef
 	const openRouterModelInfo =
 		mode === "plan" ? apiConfiguration.planModeOpenRouterModelInfo : apiConfiguration.actModeOpenRouterModelInfo
 
-	// Backward compatibility: Cline previously stored model selection in OpenRouter keys.
+	// Backward compatibility: FenneQ previously stored model selection in OpenRouter keys.
 	const clineModelId =
 		(mode === "plan" ? apiConfiguration.planModeClineModelId : apiConfiguration.actModeClineModelId) || openRouterModelId
 	const clineModelInfo =
