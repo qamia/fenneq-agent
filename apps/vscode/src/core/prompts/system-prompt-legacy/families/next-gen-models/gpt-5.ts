@@ -12,7 +12,7 @@ export const SYSTEM_PROMPT_GPT_5 = async (
 	browserSettings: BrowserSettings,
 	focusChainSettings: FocusChainSettings,
 ) => {
-	return `You are Cline, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.
+	return `You are FenneQ, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.
 
 
 TOOL USE
