@@ -30,6 +30,8 @@ interface ModelSelectorProps {
 	onChange: (e: any) => void
 	zIndex?: number
 	label?: string
+	// Qortex (QAM-494): optional display labels keyed by model id (e.g. FenneQ tier names).
+	labels?: Record<string, string>
 }
 
 /*
@@ -46,7 +48,7 @@ OG Saoud Note:
 /**
  * A reusable component for selecting models from a dropdown
  */
-export const ModelSelector = ({ models, selectedModelId, onChange, zIndex, label = "Model" }: ModelSelectorProps) => {
+export const ModelSelector = ({ models, selectedModelId, onChange, zIndex, label = "Model", labels }: ModelSelectorProps) => {
 	return (
 		<DropdownContainer className="dropdown-container" zIndex={zIndex}>
 			<label htmlFor="model-id">
@@ -56,7 +58,7 @@ export const ModelSelector = ({ models, selectedModelId, onChange, zIndex, label
 				<VSCodeOption value="">Select a model...</VSCodeOption>
 				{Object.keys(models).map((modelId) => (
 					<VSCodeOption className="break-words whitespace-normal max-w-full" key={modelId} value={modelId}>
-						{modelId}
+						{labels?.[modelId] ?? modelId}
 					</VSCodeOption>
 				))}
 			</VSCodeDropdown>

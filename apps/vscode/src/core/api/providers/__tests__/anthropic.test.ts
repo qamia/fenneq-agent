@@ -1,7 +1,7 @@
 import { afterEach, describe, it } from "mocha"
 import sinon from "sinon"
 import "should"
-import { anthropicModels } from "@shared/api"
+import { anthropicModels, FENNEQ_TIERS } from "@shared/api"
 import { ANTHROPIC_FAST_MODE_BETA, AnthropicHandler } from "../anthropic"
 
 describe("AnthropicHandler", () => {
@@ -13,6 +13,24 @@ describe("AnthropicHandler", () => {
 		[Symbol.asyncIterator]: async function* () {
 			yield* data
 		},
+	})
+
+	// Qortex (QAM-494): the FenneQ Solar/Aurora/Comet tiers must each resolve to a real catalog model.
+	describe("FenneQ tiers (QAM-494)", () => {
+		it("maps every tier to a model that exists in the catalog", () => {
+			for (const { modelId } of FENNEQ_TIERS) {
+				anthropicModels.should.have.property(modelId)
+			}
+		})
+
+		for (const { tier, modelId } of FENNEQ_TIERS) {
+			it(`resolves the ${tier} tier to ${modelId}`, () => {
+				const handler = new AnthropicHandler({ apiKey: "test-api-key", apiModelId: modelId })
+				const result = handler.getModel()
+				result.id.should.equal(modelId)
+				result.info.should.deepEqual(anthropicModels[modelId])
+			})
+		}
 	})
 
 	describe("getModel", () => {

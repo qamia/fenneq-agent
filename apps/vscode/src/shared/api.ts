@@ -178,7 +178,7 @@ export const hicapModelInfoSaneDefaults: HicapCompatibleModelInfo = {
 // Anthropic
 // https://docs.anthropic.com/en/docs/about-claude/models // prices updated 2025-01-02
 export type AnthropicModelId = keyof typeof anthropicModels
-export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-4-5-20250929"
+export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-4-6" // Qortex (QAM-494): FenneQ Aurora tier
 export const ANTHROPIC_MIN_THINKING_BUDGET = 1_024
 export const ANTHROPIC_MAX_THINKING_BUDGET = 6_000
 export const anthropicModels = {
@@ -467,6 +467,26 @@ export const anthropicModels = {
 		cacheReadsPrice: 0.03,
 	},
 } as const satisfies Record<string, ModelInfo> // as const assertion makes the object deeply readonly
+
+// Qortex (QAM-494): FenneQ cloud tiers — the single source of truth shared by the
+// extension host and the webview model picker. Each tier maps to a Claude model
+// that already exists in `anthropicModels` above. The `satisfies` clause makes the
+// build fail if a tier ever points at a model id that isn't in the catalog.
+export const FENNEQ_TIERS = [
+	{ tier: "Solar", modelId: "claude-opus-4-8", blurb: "Frontier — deepest reasoning, hardest problems" },
+	{ tier: "Aurora", modelId: "claude-sonnet-4-6", blurb: "Balanced — the everyday default" },
+	{ tier: "Comet", modelId: "claude-haiku-4-5-20251001", blurb: "Fast — quick, low-cost answers" },
+] as const satisfies ReadonlyArray<{ tier: string; modelId: AnthropicModelId; blurb: string }>
+
+// Display labels keyed by model id (e.g. "Solar (claude-opus-4-8)") for the picker.
+export const FENNEQ_TIER_LABELS: Record<string, string> = Object.fromEntries(
+	FENNEQ_TIERS.map((t) => [t.modelId, `${t.tier} (${t.modelId})`]),
+)
+
+// The curated model catalog the FenneQ picker shows (a subset of `anthropicModels`).
+export const fenneqTierModels: Record<string, ModelInfo> = Object.fromEntries(
+	FENNEQ_TIERS.map((t) => [t.modelId, anthropicModels[t.modelId]]),
+)
 
 // Claude Code
 export type ClaudeCodeModelId = keyof typeof claudeCodeModels

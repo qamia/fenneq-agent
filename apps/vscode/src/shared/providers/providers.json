@@ -18,7 +18,7 @@
 		},
 		{
 			"value": "anthropic",
-			"label": "Anthropic"
+			"label": "FenneQ Cloud"
 		},
 		{
 			"value": "bedrock",
