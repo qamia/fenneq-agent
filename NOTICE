@@ -1,0 +1,39 @@
+FenneQ
+Copyright 2026 Qamia
+
+This product is a derivative work of Cline, used under the Apache License,
+Version 2.0 (the "License"). You may obtain a copy of the License in the
+accompanying LICENSE file or at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+------------------------------------------------------------------------
+Upstream attribution
+------------------------------------------------------------------------
+
+Cline
+Copyright 2026 Cline Bot Inc.
+https://github.com/cline/cline
+
+The Apache-2.0 license text and Cline Bot Inc.'s copyright notice are retained
+in the LICENSE file at the root of this repository.
+
+------------------------------------------------------------------------
+Modifications by Qamia (Apache-2.0 §4(b): statement of changes)
+------------------------------------------------------------------------
+
+Qamia has modified the original Cline work to produce FenneQ. Notable changes
+include (non-exhaustive):
+
+  * Rebranded the agent, its VS Code extension, persona, walkthrough, and
+    user-facing UI from "Cline" to "FenneQ".
+  * Replaced the model picker with the FenneQ cloud variants
+    (Solar -> Opus, Aurora -> Sonnet, Comet -> Haiku).
+  * Integrated FenneQ into the Qortex editor as a built-in extension and
+    routed model traffic through Qamia's backend proxy (key custody,
+    caching, metering, billing, routing, BYOK).
+  * Connected FenneQ to the Qamia "Fenneq" MCP knowledge server.
+
+Internal identifiers inherited from Cline (e.g. the extension id
+`saoudrizwan.claude-dev`, the `cline.*` command/setting namespaces) are
+deliberately retained for compatibility and are not a claim of authorship.

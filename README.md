@@ -1,3 +1,16 @@
+<!--
+  This repository is FenneQ — Qamia's fork of Cline (Apache-2.0), shipped as the
+  built-in agent of the Qortex editor. The shipping extension lives in apps/vscode
+  (see apps/vscode/README.md). Attribution + statement of changes: see NOTICE.
+  The marketing content below is inherited from upstream Cline and kept for context.
+-->
+
+> **FenneQ** — Qamia's agentic coding platform, a fork of **[Cline](https://github.com/cline/cline)** (Apache-2.0).
+> The product extension is in [`apps/vscode/`](apps/vscode/) · attribution & changes: [`NOTICE`](NOTICE) · license: [`LICENSE`](LICENSE).
+> Everything below is upstream Cline's own README, retained for context.
+
+---
+
 <p align="center">
   <img src="assets/icons/icon.png" width="80" alt="Cline" />
 </p>
