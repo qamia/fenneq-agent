@@ -51,7 +51,7 @@
 	"contributes": {
 		"icons": {
 			"cline-icon": {
-				"description": "cline",
+				"description": "FenneQ",
 				"default": {
 					"fontPath": "assets/icons/cline-bot.woff",
 					"fontCharacter": "\\e900"
