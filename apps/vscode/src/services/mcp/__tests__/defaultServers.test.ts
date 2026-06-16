@@ -11,9 +11,9 @@ import {
 import { McpSettingsSchema } from "../schemas"
 
 describe("defaultServers (QAM-497 — bundled Fenneq MCP)", () => {
-	it("builds a streamableHttp entry with no auth header by default", () => {
+	it("builds an sse entry with no auth header by default", () => {
 		const entry = buildFenneqServerEntry()
-		entry.type.should.equal("streamableHttp")
+		entry.type.should.equal("sse")
 		entry.url.should.equal(FENNEQ_MCP_URL)
 		;(entry.headers === undefined).should.be.true()
 	})
@@ -28,17 +28,17 @@ describe("defaultServers (QAM-497 — bundled Fenneq MCP)", () => {
 		Object.keys(defaultMcpServers()).should.deepEqual([FENNEQ_SERVER_NAME])
 	})
 
-	it("the seeded default is VALID per the MCP settings schema and resolves to streamableHttp", () => {
-		// Critical: the schema union resolves an absent `type` to sse — this proves
-		// our seed explicitly resolves to streamableHttp, not sse.
+	it("the seeded default is VALID per the MCP settings schema and resolves to sse", () => {
+		// The Fenneq server speaks SSE (FastMCP sse_app at /mcp); confirm the seed
+		// is schema-valid and resolves to the sse transport.
 		const parsed = McpSettingsSchema.parse(defaultMcpSettings())
-		parsed.mcpServers[FENNEQ_SERVER_NAME].type.should.equal("streamableHttp")
+		parsed.mcpServers[FENNEQ_SERVER_NAME].type.should.equal("sse")
 	})
 
 	it("a token-bearing default also validates and keeps the header", () => {
 		const parsed = McpSettingsSchema.parse(defaultMcpSettings("tok-xyz"))
 		const fenneq = parsed.mcpServers[FENNEQ_SERVER_NAME] as { type: string; headers?: Record<string, string> }
-		fenneq.type.should.equal("streamableHttp")
+		fenneq.type.should.equal("sse")
 		fenneq.headers!.Authorization.should.equal("Bearer tok-xyz")
 	})
 
