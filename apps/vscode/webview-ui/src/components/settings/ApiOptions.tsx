@@ -65,6 +65,11 @@ interface ApiOptionsProps {
 	initialModelTab?: "recommended" | "free"
 }
 
+// Qortex exposes a single first-party provider — FenneQ Cloud (the Solar/Aurora/
+// Comet tiers) — and hides every upstream provider from the picker. "FenneQ Cloud"
+// is the relabeled `anthropic` provider entry in providers.json.
+export const FENNEQ_ONLY_PROVIDER = "anthropic"
+
 // This is necessary to ensure dropdown opens downward, important for when this is used in popup
 export const DROPDOWN_Z_INDEX = OPENROUTER_MODEL_PICKER_Z_INDEX + 2 // Higher than the OpenRouterModelPicker's and ModelSelectorTooltip's z-index
 
@@ -140,7 +145,8 @@ const ApiOptions = ({
 	const dropdownListRef = useRef<HTMLDivElement>(null)
 
 	const providerOptions = useMemo(() => {
-		let providers = PROVIDERS.list
+		// Qortex: expose only the first-party FenneQ Cloud provider in the picker.
+		let providers = PROVIDERS.list.filter((option) => option.value === FENNEQ_ONLY_PROVIDER)
 		// Filter by platform
 		if (PLATFORM_CONFIG.type !== PlatformType.VSCODE) {
 			// Don't include VS Code LM API for non-VSCode platforms

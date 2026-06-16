@@ -25,6 +25,15 @@ import { ApiStream } from "../transform/stream"
 
 export const ANTHROPIC_FAST_MODE_BETA = "fast-mode-2026-02-01"
 
+// FenneQ Cloud routing (QAM-500/502/503). FenneQ Cloud is the managed provider:
+// requests go through the FenneQ proxy, which holds the org Anthropic key and meters
+// usage — the user never supplies an Anthropic key. When the user hasn't configured
+// their own base URL / key, fall back to the local dev proxy + dev token so the
+// managed provider works out of the box. Overridable via env for staging/prod;
+// replaced by per-user account auth in QAM-498.
+const FENNEQ_PROXY_URL = process.env.FENNEQ_PROXY_URL?.trim() || "http://localhost:8080"
+const FENNEQ_PROXY_TOKEN = process.env.FENNEQ_PROXY_TOKEN?.trim() || "smoke-token-123"
+
 interface AnthropicHandlerOptions extends CommonApiHandlerOptions {
 	apiKey?: string
 	anthropicBaseUrl?: string
@@ -43,13 +52,15 @@ export class AnthropicHandler implements ApiHandler {
 
 	private ensureClient(): Anthropic {
 		if (!this.client) {
-			if (!this.options.apiKey) {
-				throw new Error("Anthropic API key is required")
-			}
+			// FenneQ Cloud is managed: route through the FenneQ proxy with a dev token
+			// when the user hasn't configured their own. The proxy injects the real org
+			// key upstream, so no user-supplied Anthropic key is needed here.
+			const apiKey = this.options.apiKey || FENNEQ_PROXY_TOKEN
+			const baseURL = this.options.anthropicBaseUrl || FENNEQ_PROXY_URL
 			try {
 				this.client = new Anthropic({
-					apiKey: this.options.apiKey,
-					baseURL: this.options.anthropicBaseUrl || undefined,
+					apiKey,
+					baseURL,
 					defaultHeaders: buildExternalBasicHeaders(),
 					fetch, // Use configured fetch with proxy support
 				})
