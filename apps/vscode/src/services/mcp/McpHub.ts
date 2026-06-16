@@ -44,6 +44,7 @@ import { expandEnvironmentVariables } from "@/utils/envExpansion"
 import { getServerAuthHash } from "@/utils/mcpAuth"
 import { TelemetryService } from "../telemetry/TelemetryService"
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "./constants"
+import { applyFenneqWorkspaceAuth, getFenneqWorkspaceKey } from "./fenneqAuth"
 import { McpOAuthManager } from "./McpOAuthManager"
 import { StreamableHttpReconnectHandler } from "./StreamableHttpReconnectHandler"
 import { BaseConfigSchema, McpSettingsSchema, ServerConfigSchema } from "./schemas"
@@ -273,6 +274,15 @@ export class McpHub {
 	}
 
 	private async initializeMcpServers(): Promise<void> {
+		// QAM-498: inject the per-user workspace key into the bundled Fenneq server
+		// (if one is configured) before reading + connecting, so it comes up
+		// authenticated and scoped to the user's workspace. Non-fatal.
+		try {
+			const settingsPath = await getMcpSettingsFilePathHelper(await this.getSettingsDirectoryPath())
+			await applyFenneqWorkspaceAuth(settingsPath, getFenneqWorkspaceKey())
+		} catch (error) {
+			Logger.error("Failed to apply Fenneq workspace auth (non-fatal):", error as Error)
+		}
 		const settings = await this.readAndValidateMcpSettingsFile()
 		if (settings) {
 			await this.updateServerConnections(settings.mcpServers)
