@@ -2,45 +2,53 @@
  * Default bundled MCP servers (QAM-497).
  *
  * Qortex ships with the **Fenneq MCP preconfigured** so every user is auto-connected
- * to their Supabase-backed knowledge server with no manual setup. v1 uses the remote
- * **Streamable-HTTP** transport (cloud-only) — there is no local Python runtime to
- * bundle into the editor.
+ * to their Supabase-backed knowledge server with no manual setup.
  *
- * Per-user authentication (QAM-498) layers on top: once the user's Supabase session
- * yields a token, it is injected as a Bearer header via {@link withFenneqAuth}. Until
- * then the server is *configured but unauthenticated*, a state the connection-health
- * UI (QAM-499) surfaces to the user.
+ * Transport: the Fenneq MCP server (a FastMCP app, `qamia/FenneQ`) exposes an
+ * **SSE** endpoint at `/mcp` over HTTP (`fenneq.mcp.transport_http`, run via
+ * `scripts/run_http.py`, default port 8765). Every request except `/healthz` is
+ * gated by `WorkspaceAuthMiddleware`, which resolves an `Authorization: Bearer
+ * <workspace-api-key>` to a workspace (`fenneq.auth.api_keys.verify_key`). So the
+ * agent connects as an `sse` server and authenticates with a workspace API key.
  *
- * The seed is written only when the MCP settings file is first created (fresh install);
- * existing users' settings are never overwritten.
+ * Per-user authentication (QAM-498): the workspace API key is injected as the
+ * Bearer header via {@link withFenneqAuth}. The *server side already exists* (the
+ * api_keys table + verify_key); QAM-498's remaining work is to obtain the user's
+ * workspace key and inject it here. Until then the server is *configured but
+ * unauthenticated*, a state the connection-health UI (QAM-499) surfaces.
+ *
+ * The seed is written only when the MCP settings file is first created (fresh
+ * install); existing users' settings are never overwritten.
  */
 
 export const FENNEQ_SERVER_NAME = "fenneq"
 
 /**
- * The hosted Fenneq MCP endpoint. Overridable (staging / self-host) via the
- * `FENNEQ_MCP_URL` env var at build/runtime; defaults to the production endpoint.
+ * The Fenneq MCP SSE endpoint. Defaults to the local server
+ * (`scripts/run_http.py` on `FENNEQ_HTTP_PORT`, default 8765); override via the
+ * `FENNEQ_MCP_URL` env var to point at a hosted deployment.
  */
-export const FENNEQ_MCP_URL = process.env.FENNEQ_MCP_URL?.trim() || "https://mcp.fenneq.qamia.dev"
+export const FENNEQ_MCP_URL = process.env.FENNEQ_MCP_URL?.trim() || "http://127.0.0.1:8765/mcp"
 
 /**
- * A remote (Streamable-HTTP) MCP server entry. `type` MUST be set explicitly:
- * the settings schema's union resolves an absent `type` to `sse`, not streamableHttp.
+ * A Fenneq MCP server entry (SSE transport). `type` MUST be set explicitly: the
+ * settings schema's union resolves an absent `type` to `sse` — which happens to be
+ * what we want, but we set it to avoid relying on union ordering.
  */
-export interface RemoteMcpServerConfig {
-	type: "streamableHttp"
+export interface FenneqMcpServerConfig {
+	type: "sse"
 	url: string
 	headers?: Record<string, string>
 }
 
 /**
- * Build the default Fenneq server entry. The per-user Bearer header is included
- * only when a token is supplied (QAM-498); otherwise the entry is configured but
- * unauthenticated.
+ * Build the default Fenneq server entry. The workspace-key Bearer header is
+ * included only when a key is supplied (QAM-498); otherwise the entry is
+ * configured but unauthenticated.
  */
-export function buildFenneqServerEntry(authToken?: string): RemoteMcpServerConfig {
-	const entry: RemoteMcpServerConfig = {
-		type: "streamableHttp",
+export function buildFenneqServerEntry(authToken?: string): FenneqMcpServerConfig {
+	const entry: FenneqMcpServerConfig = {
+		type: "sse",
 		url: FENNEQ_MCP_URL,
 	}
 	if (authToken) {
@@ -50,19 +58,19 @@ export function buildFenneqServerEntry(authToken?: string): RemoteMcpServerConfi
 }
 
 /** The `mcpServers` map seeded into a fresh settings file. */
-export function defaultMcpServers(authToken?: string): Record<string, RemoteMcpServerConfig> {
+export function defaultMcpServers(authToken?: string): Record<string, FenneqMcpServerConfig> {
 	return { [FENNEQ_SERVER_NAME]: buildFenneqServerEntry(authToken) }
 }
 
 /** Full settings-file contents for a fresh install. */
-export function defaultMcpSettings(authToken?: string): { mcpServers: Record<string, RemoteMcpServerConfig> } {
+export function defaultMcpSettings(authToken?: string): { mcpServers: Record<string, FenneqMcpServerConfig> } {
 	return { mcpServers: defaultMcpServers(authToken) }
 }
 
 /**
- * QAM-498 seam: inject / refresh the per-user Bearer token on the Fenneq entry,
- * returning a new settings object (immutable). No-op if the Fenneq server is absent
- * (e.g. a user who deliberately removed it).
+ * QAM-498 seam: inject / refresh the per-user workspace API key as the Bearer
+ * header on the Fenneq entry, returning a new settings object (immutable). No-op if
+ * the Fenneq server is absent (e.g. a user who deliberately removed it).
  */
 export function withFenneqAuth<T extends { mcpServers: Record<string, any> }>(settings: T, authToken: string): T {
 	const server = settings.mcpServers?.[FENNEQ_SERVER_NAME]
