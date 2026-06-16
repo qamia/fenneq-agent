@@ -82,16 +82,16 @@
 					},
 					{
 						"id": "advanced-features",
-						"title": "Always Use the Best AI Models",
-						"description": "FenneQ empowers you with State-of-the-Art AI, connecting to top models (Anthropic, Gemini, OpenAI & more).",
+						"title": "Solar, Aurora & Comet — Your FenneQ Tiers",
+						"description": "Pick the right model per task. No API keys — FenneQ Cloud handles the model and billing.",
 						"media": {
 							"markdown": "walkthrough/step3.md"
 						}
 					},
 					{
 						"id": "mcp",
-						"title": "Extend with Powerful Tools (MCP)",
-						"description": "Connect to databases, APIs, or discover new capabilities in the MCP Marketplace.",
+						"title": "Your Team's Knowledge, Built In",
+						"description": "FenneQ comes preconnected to the Fenneq knowledge server — skills, lessons, and more.",
 						"media": {
 							"markdown": "walkthrough/step4.md"
 						}
