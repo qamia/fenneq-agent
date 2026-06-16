@@ -2,11 +2,8 @@ import { CLAUDE_SONNET_1M_SUFFIX, FENNEQ_TIER_LABELS, fenneqTierModels } from "@
 import type { Mode } from "@shared/storage/types"
 import { isClaudeOpusAdaptiveThinkingModel, resolveClaudeOpusAdaptiveThinking } from "@shared/utils/reasoning-support"
 import { useExtensionState } from "@/context/ExtensionStateContext"
-import { ApiKeyField } from "../common/ApiKeyField"
-import { BaseUrlField } from "../common/BaseUrlField"
 import { ModelInfoView } from "../common/ModelInfoView"
 import { ModelSelector } from "../common/ModelSelector"
-import { RemotelyConfiguredInputWrapper } from "../common/RemotelyConfiguredInputWrapper"
 import ReasoningEffortSelector from "../ReasoningEffortSelector"
 import ThinkingBudgetSlider from "../ThinkingBudgetSlider"
 import { getModeSpecificFields, normalizeApiConfiguration } from "../utils/providerUtils"
@@ -39,8 +36,8 @@ interface AnthropicProviderProps {
  * The Anthropic provider configuration component
  */
 export const AnthropicProvider = ({ showModelOptions, isPopup, currentMode }: AnthropicProviderProps) => {
-	const { apiConfiguration, remoteConfigSettings } = useExtensionState()
-	const { handleFieldChange, handleModeFieldChange } = useApiConfigurationHandlers()
+	const { apiConfiguration } = useExtensionState()
+	const { handleModeFieldChange } = useApiConfigurationHandlers()
 	const modeFields = getModeSpecificFields(apiConfiguration, currentMode)
 
 	// Get the normalized configuration
@@ -51,24 +48,9 @@ export const AnthropicProvider = ({ showModelOptions, isPopup, currentMode }: An
 
 	return (
 		<div>
-			<ApiKeyField
-				initialValue={apiConfiguration?.apiKey || ""}
-				onChange={(value) => handleFieldChange("apiKey", value)}
-				providerName="Anthropic"
-				signupUrl="https://console.anthropic.com/settings/keys"
-			/>
-
-			<RemotelyConfiguredInputWrapper hidden={remoteConfigSettings?.anthropicBaseUrl === undefined}>
-				<BaseUrlField
-					disabled={!!remoteConfigSettings?.anthropicBaseUrl}
-					initialValue={apiConfiguration?.anthropicBaseUrl}
-					label="Use custom base URL"
-					onChange={(value) => handleFieldChange("anthropicBaseUrl", value)}
-					placeholder="Default: https://api.anthropic.com"
-					showLockIcon={!!remoteConfigSettings?.anthropicBaseUrl}
-				/>
-			</RemotelyConfiguredInputWrapper>
-
+			{/* QAM-497: FenneQ Cloud is a managed provider — no user-supplied Anthropic
+			    key or custom base URL. Auth is handled by the account/proxy (QAM-498/500).
+			    Only the FenneQ tier picker + thinking controls are shown. */}
 			{showModelOptions && (
 				<>
 					<ModelSelector
