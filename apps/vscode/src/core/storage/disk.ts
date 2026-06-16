@@ -11,6 +11,7 @@ import os from "os"
 import * as path from "path"
 import { HostProvider } from "@/hosts/host-provider"
 import { ExtensionRegistryInfo } from "@/registry"
+import { defaultMcpSettings } from "@/services/mcp/defaultServers"
 import { telemetryService } from "@/services/telemetry"
 import { McpMarketplaceCatalog } from "@/shared/mcp"
 import { Logger } from "@/shared/services/Logger"
@@ -228,7 +229,11 @@ export async function getMcpSettingsFilePath(settingsDirectoryPath: string): Pro
 	const mcpSettingsFilePath = path.join(settingsDirectoryPath, GlobalFileNames.mcpSettings)
 	const fileExists = await fileExistsAtPath(mcpSettingsFilePath)
 	if (!fileExists) {
-		await fs.writeFile(mcpSettingsFilePath, JSON.stringify({ mcpServers: {} }, null, 2))
+		// QAM-497: ship the Fenneq MCP preconfigured. Seed a fresh settings file with
+		// the default Fenneq server so users are auto-connected with no manual setup.
+		// Only on first creation — existing settings are never overwritten. Per-user
+		// auth (QAM-498) injects the Bearer token onto this entry once available.
+		await fs.writeFile(mcpSettingsFilePath, JSON.stringify(defaultMcpSettings(), null, 2))
 	}
 	return mcpSettingsFilePath
 }
