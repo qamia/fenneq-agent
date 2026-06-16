@@ -1,4 +1,5 @@
 import { DEFAULT_MCP_TIMEOUT_SECONDS, McpServer } from "@shared/mcp"
+import { classifyMcpServerHealth } from "@shared/mcp-health"
 import { StringRequest } from "@shared/proto/cline/common"
 import {
 	McpServers,
@@ -279,6 +280,13 @@ const ServerRow = ({
 
 			{server.error ? (
 				<div className="text-sm bg-text-block-background rounded-b-sm">
+					{/* QAM-499: distinguish an auth failure (e.g. the bundled Fenneq server
+					    with no workspace key yet) from a generic offline error. */}
+					{classifyMcpServerHealth(server) === "auth-error" && (
+						<div className="text-warning mb-1 px-2.5 pt-2 break-words font-medium">
+							Authentication required — sign in to connect this server.
+						</div>
+					)}
 					<div className="text-failed-icon mb-2 px-2.5 break-words">{server.error}</div>
 					{server.oauthRequired && server.oauthAuthStatus === "unauthenticated" ? (
 						<Button
