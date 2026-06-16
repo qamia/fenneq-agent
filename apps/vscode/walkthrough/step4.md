@@ -1,7 +1,9 @@
-# Unlock Specialized Capabilities with MCP
+# Your Team's Knowledge, Built In
 
-**The Model Context Protocol (MCP) connects FenneQ to a world of powerful tools.**
+**FenneQ comes preconnected to the Fenneq knowledge server — no setup required.**
 
-Go beyond local code. With the Model Context Protocol (MCP), FenneQ accesses vital context from external datasources like databases and APIs. It can interact with these platforms and leverage a growing marketplace of specialized, secure tools to tackle complex, real-world development tasks.
+Beyond the model's general knowledge, FenneQ taps your team's captured expertise over the Model Context Protocol (MCP): reusable **skills** (problem playbooks) and **lessons** (hard-won gotchas). Just pose a problem that matches one, or ask FenneQ to *"use the Fenneq tools to list available skills."*
 
-![FenneQ MCP Servers Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-mcp-servers-4_compress.webp)
+Check the connection in the **MCP servers** view (the server icon at the top of the panel): **Connected**, **Authentication required** (sign in), or **Offline**.
+
+> MCP is extensible — connect more tools and data sources as your team grows.
