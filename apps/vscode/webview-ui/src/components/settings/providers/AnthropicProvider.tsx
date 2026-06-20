@@ -10,6 +10,7 @@ import {
 	resolveClaudeOpusAdaptiveThinking,
 } from "@shared/utils/reasoning-support";
 import { useExtensionState } from "@/context/ExtensionStateContext";
+import { ApiKeyField } from "../common/ApiKeyField";
 import { ModelInfoView } from "../common/ModelInfoView";
 import { ModelSelector } from "../common/ModelSelector";
 import ReasoningEffortSelector from "../ReasoningEffortSelector";
@@ -52,7 +53,8 @@ export const AnthropicProvider = ({
 	currentMode,
 }: AnthropicProviderProps) => {
 	const { apiConfiguration } = useExtensionState();
-	const { handleModeFieldChange } = useApiConfigurationHandlers();
+	const { handleFieldChange, handleModeFieldChange } =
+		useApiConfigurationHandlers();
 	const modeFields = getModeSpecificFields(apiConfiguration, currentMode);
 
 	// Get the normalized configuration
@@ -70,9 +72,14 @@ export const AnthropicProvider = ({
 
 	return (
 		<div>
-			{/* QAM-497: FenneQ Cloud is a managed provider — no user-supplied Anthropic
-			    key or custom base URL. Auth is handled by the account/proxy (QAM-498/500).
-			    Only the FenneQ tier picker + thinking controls are shown. */}
+			{/* BYOK: the user pastes their own Anthropic key (stored in OS secret
+			    storage, used to call Anthropic directly). Then they pick a FenneQ tier. */}
+			<ApiKeyField
+				initialValue={apiConfiguration?.apiKey || ""}
+				onChange={(value) => handleFieldChange("apiKey", value)}
+				providerName="Anthropic"
+				signupUrl="https://console.anthropic.com/settings/keys"
+			/>
 			{showModelOptions && (
 				<>
 					<ModelSelector
