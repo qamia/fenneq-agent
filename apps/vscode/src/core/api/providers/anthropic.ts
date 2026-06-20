@@ -1,92 +1,103 @@
-import { Anthropic } from "@anthropic-ai/sdk"
+import { Anthropic } from "@anthropic-ai/sdk";
 import type {
 	MessageCreateParamsStreaming as BetaMessageCreateParamsStreaming,
 	BetaRawMessageStreamEvent,
-} from "@anthropic-ai/sdk/resources/beta/messages/messages"
-import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/index"
-import type { MessageCreateParamsStreaming as AnthropicMessageCreateParamsStreaming } from "@anthropic-ai/sdk/resources/messages/messages"
-import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
+} from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import type { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/index";
+import type { MessageCreateParamsStreaming as AnthropicMessageCreateParamsStreaming } from "@anthropic-ai/sdk/resources/messages/messages";
+import type { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming";
 import {
 	ANTHROPIC_FAST_MODE_SUFFIX,
-	AnthropicModelId,
+	type AnthropicModelId,
 	anthropicDefaultModelId,
 	anthropicModels,
 	CLAUDE_SONNET_1M_SUFFIX,
-	ModelInfo,
-} from "@shared/api"
-import { isClaudeOpusAdaptiveThinkingModel, resolveClaudeOpusAdaptiveThinking } from "@shared/utils/reasoning-support"
-import { buildExternalBasicHeaders } from "@/services/EnvUtils"
-import { ClineStorageMessage } from "@/shared/messages/content"
-import { fetch } from "@/shared/net"
-import { ApiHandler, CommonApiHandlerOptions } from "../index"
-import { withRetry } from "../retry"
-import { sanitizeAnthropicMessages } from "../transform/anthropic-format"
-import { ApiStream } from "../transform/stream"
+	type ModelInfo,
+} from "@shared/api";
+import {
+	isClaudeOpusAdaptiveThinkingModel,
+	resolveClaudeOpusAdaptiveThinking,
+} from "@shared/utils/reasoning-support";
+import { buildExternalBasicHeaders } from "@/services/EnvUtils";
+import type { ClineStorageMessage } from "@/shared/messages/content";
+import { fetch } from "@/shared/net";
+import type { ApiHandler, CommonApiHandlerOptions } from "../index";
+import { withRetry } from "../retry";
+import { sanitizeAnthropicMessages } from "../transform/anthropic-format";
+import type { ApiStream } from "../transform/stream";
 
-export const ANTHROPIC_FAST_MODE_BETA = "fast-mode-2026-02-01"
+export const ANTHROPIC_FAST_MODE_BETA = "fast-mode-2026-02-01";
 
-// FenneQ Cloud routing (QAM-500/502/503). FenneQ Cloud is the managed provider:
-// requests go through the FenneQ proxy, which holds the org Anthropic key and meters
-// usage — the user never supplies an Anthropic key. When the user hasn't configured
-// their own base URL / key, fall back to the local dev proxy + dev token so the
-// managed provider works out of the box. Overridable via env for staging/prod;
-// replaced by per-user account auth in QAM-498.
-const FENNEQ_PROXY_URL = process.env.FENNEQ_PROXY_URL?.trim() || "http://localhost:8080"
-const FENNEQ_PROXY_TOKEN = process.env.FENNEQ_PROXY_TOKEN?.trim() || "smoke-token-123"
+// BYOK (bring-your-own-key): the user supplies their own Anthropic API key in
+// settings and the agent talks to Anthropic directly — no proxy. The key lives only
+// in the user's OS secret storage and never leaves their machine. A hosted "FenneQ
+// Cloud" (managed org key + billing) can be added later as a separate provider mode.
 
 interface AnthropicHandlerOptions extends CommonApiHandlerOptions {
-	apiKey?: string
-	anthropicBaseUrl?: string
-	apiModelId?: string
-	reasoningEffort?: string
-	thinkingBudgetTokens?: number
+	apiKey?: string;
+	anthropicBaseUrl?: string;
+	apiModelId?: string;
+	reasoningEffort?: string;
+	thinkingBudgetTokens?: number;
 }
 
 export class AnthropicHandler implements ApiHandler {
-	private options: AnthropicHandlerOptions
-	private client: Anthropic | undefined
+	private options: AnthropicHandlerOptions;
+	private client: Anthropic | undefined;
 
 	constructor(options: AnthropicHandlerOptions) {
-		this.options = options
+		this.options = options;
 	}
 
 	private ensureClient(): Anthropic {
 		if (!this.client) {
-			// FenneQ Cloud is managed: route through the FenneQ proxy with a dev token
-			// when the user hasn't configured their own. The proxy injects the real org
-			// key upstream, so no user-supplied Anthropic key is needed here.
-			const apiKey = this.options.apiKey || FENNEQ_PROXY_TOKEN
-			const baseURL = this.options.anthropicBaseUrl || FENNEQ_PROXY_URL
+			// BYOK: use the user's own Anthropic key + the default Anthropic endpoint
+			// (or their custom base URL, if set). No proxy fallback.
+			const apiKey = this.options.apiKey;
+			if (!apiKey) {
+				throw new Error(
+					"No Anthropic API key set. Open FenneQ settings → API Configuration and paste your Anthropic API key (from console.anthropic.com).",
+				);
+			}
+			const baseURL = this.options.anthropicBaseUrl || undefined;
 			try {
 				this.client = new Anthropic({
 					apiKey,
 					baseURL,
 					defaultHeaders: buildExternalBasicHeaders(),
 					fetch, // Use configured fetch with proxy support
-				})
+				});
 			} catch (error) {
-				throw new Error(`Error creating Anthropic client: ${error.message}`)
+				throw new Error(`Error creating Anthropic client: ${error.message}`);
 			}
 		}
-		return this.client
+		return this.client;
 	}
 
 	@withRetry()
-	async *createMessage(systemPrompt: string, messages: ClineStorageMessage[], tools?: AnthropicTool[]): ApiStream {
-		const client = this.ensureClient()
+	async *createMessage(
+		systemPrompt: string,
+		messages: ClineStorageMessage[],
+		tools?: AnthropicTool[],
+	): ApiStream {
+		const client = this.ensureClient();
 
-		const model = this.getModel()
-		let stream: AnthropicStream<Anthropic.RawMessageStreamEvent> | AsyncIterable<BetaRawMessageStreamEvent>
+		const model = this.getModel();
+		let stream:
+			| AnthropicStream<Anthropic.RawMessageStreamEvent>
+			| AsyncIterable<BetaRawMessageStreamEvent>;
 
-		const useFastMode = model.id.endsWith(ANTHROPIC_FAST_MODE_SUFFIX)
-		const baseModelId = useFastMode ? model.id.slice(0, -ANTHROPIC_FAST_MODE_SUFFIX.length) : model.id
+		const useFastMode = model.id.endsWith(ANTHROPIC_FAST_MODE_SUFFIX);
+		const baseModelId = useFastMode
+			? model.id.slice(0, -ANTHROPIC_FAST_MODE_SUFFIX.length)
+			: model.id;
 		const modelId = baseModelId.endsWith(CLAUDE_SONNET_1M_SUFFIX)
 			? baseModelId.slice(0, -CLAUDE_SONNET_1M_SUFFIX.length)
-			: baseModelId
-		const enable1mContextWindow = baseModelId.endsWith(CLAUDE_SONNET_1M_SUFFIX)
+			: baseModelId;
+		const enable1mContextWindow = baseModelId.endsWith(CLAUDE_SONNET_1M_SUFFIX);
 		const fastModeBetas = enable1mContextWindow
 			? [ANTHROPIC_FAST_MODE_BETA, "context-1m-2025-08-07"]
-			: [ANTHROPIC_FAST_MODE_BETA]
+			: [ANTHROPIC_FAST_MODE_BETA];
 		const createFastModeMessage = (
 			body: AnthropicMessageCreateParamsStreaming,
 		): Promise<AsyncIterable<BetaRawMessageStreamEvent>> => {
@@ -98,40 +109,54 @@ export class AnthropicHandler implements ApiHandler {
 				...body,
 				betas: fastModeBetas,
 				speed: "fast",
-			})
-		}
+			});
+		};
 
-		const budget_tokens = this.options.thinkingBudgetTokens || 0
+		const budget_tokens = this.options.thinkingBudgetTokens || 0;
 
 		// Tools are available only when native tools are enabled.
-		const nativeToolsOn = tools?.length && tools?.length > 0
-		const reasoningOn = (model.info.supportsReasoning ?? false) && budget_tokens !== 0
+		const nativeToolsOn = tools?.length && tools?.length > 0;
+		const reasoningOn =
+			(model.info.supportsReasoning ?? false) && budget_tokens !== 0;
 
 		// Claude Opus 4.5+ uses adaptive thinking instead of budgeted extended thinking.
-		const isAdaptiveThinkingModel = isClaudeOpusAdaptiveThinkingModel(modelId)
+		const isAdaptiveThinkingModel = isClaudeOpusAdaptiveThinkingModel(modelId);
 		const adaptiveThinking = isAdaptiveThinkingModel
-			? resolveClaudeOpusAdaptiveThinking(this.options.reasoningEffort, budget_tokens)
-			: undefined
-		const adaptiveThinkingEnabled = adaptiveThinking?.enabled === true
-		const adaptiveThinkingEffort = adaptiveThinking?.effort
-		const thinkingEnabled = isAdaptiveThinkingModel ? adaptiveThinkingEnabled : reasoningOn
+			? resolveClaudeOpusAdaptiveThinking(
+					this.options.reasoningEffort,
+					budget_tokens,
+				)
+			: undefined;
+		const adaptiveThinkingEnabled = adaptiveThinking?.enabled === true;
+		const adaptiveThinkingEffort = adaptiveThinking?.effort;
+		const thinkingEnabled = isAdaptiveThinkingModel
+			? adaptiveThinkingEnabled
+			: reasoningOn;
 		const thinkingConfig = thinkingEnabled
 			? isAdaptiveThinkingModel
 				? ({ type: "adaptive" } as any)
 				: { type: "enabled", budget_tokens: budget_tokens }
-			: undefined
-		const outputConfig = isAdaptiveThinkingModel && adaptiveThinkingEffort ? { effort: adaptiveThinkingEffort } : undefined
+			: undefined;
+		const outputConfig =
+			isAdaptiveThinkingModel && adaptiveThinkingEffort
+				? { effort: adaptiveThinkingEffort }
+				: undefined;
 
 		if (model.info.supportsPromptCache) {
-			const anthropicMessages = sanitizeAnthropicMessages(messages, true)
-			const requestBody: AnthropicMessageCreateParamsStreaming & Record<string, unknown> = {
+			const anthropicMessages = sanitizeAnthropicMessages(messages, true);
+			const requestBody: AnthropicMessageCreateParamsStreaming &
+				Record<string, unknown> = {
 				model: modelId,
 				thinking: thinkingConfig,
 				max_tokens: model.info.maxTokens || 8192,
 				// "Thinking isn't compatible with temperature, top_p, or top_k modifications as well as forced tool use."
 				// (https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking#important-considerations-when-using-extended-thinking)
 				// Adaptive Claude Opus models do not support temperature.
-				temperature: isAdaptiveThinkingModel ? undefined : reasoningOn ? undefined : 0,
+				temperature: isAdaptiveThinkingModel
+					? undefined
+					: reasoningOn
+						? undefined
+						: 0,
 				system: [
 					{
 						text: systemPrompt,
@@ -148,10 +173,11 @@ export class AnthropicHandler implements ApiHandler {
 				// - auto: allows Claude to decide whether to call any provided tools or not. This is the default value when tools are provided.
 				// - any: tells Claude that it must use one of the provided tools, but doesn’t force a particular tool.
 				// NOTE: Forcing tool use when tools are provided will result in error when thinking is also enabled.
-				tool_choice: nativeToolsOn && !thinkingEnabled ? { type: "any" } : undefined,
-			}
+				tool_choice:
+					nativeToolsOn && !thinkingEnabled ? { type: "any" } : undefined,
+			};
 			if (outputConfig) {
-				requestBody.output_config = outputConfig
+				requestBody.output_config = outputConfig;
 			}
 
 			stream = useFastMode
@@ -165,47 +191,54 @@ export class AnthropicHandler implements ApiHandler {
 									headers: {
 										"anthropic-beta": "context-1m-2025-08-07",
 									},
-								}
+								};
 							}
-							return undefined
+							return undefined;
 						})(),
-					)
+					);
 		} else {
-			const requestBody: AnthropicMessageCreateParamsStreaming & Record<string, unknown> = {
+			const requestBody: AnthropicMessageCreateParamsStreaming &
+				Record<string, unknown> = {
 				model: modelId,
 				max_tokens: model.info.maxTokens || 8192,
-				temperature: isAdaptiveThinkingModel ? undefined : reasoningOn ? undefined : 0,
+				temperature: isAdaptiveThinkingModel
+					? undefined
+					: reasoningOn
+						? undefined
+						: 0,
 				system: [{ text: systemPrompt, type: "text" }],
 				messages: sanitizeAnthropicMessages(messages, false),
 				tools: nativeToolsOn ? tools : undefined,
 				tool_choice: thinkingEnabled ? undefined : { type: "auto" },
 				stream: true,
 				thinking: thinkingConfig,
-			}
+			};
 			if (outputConfig) {
-				requestBody.output_config = outputConfig
+				requestBody.output_config = outputConfig;
 			}
 
-			stream = useFastMode ? await createFastModeMessage(requestBody) : await client.messages.create(requestBody)
+			stream = useFastMode
+				? await createFastModeMessage(requestBody)
+				: await client.messages.create(requestBody);
 		}
 
-		const lastStartedToolCall = { id: "", name: "", arguments: "" }
+		const lastStartedToolCall = { id: "", name: "", arguments: "" };
 
 		for await (const chunk of stream) {
 			switch (chunk?.type) {
 				case "message_start":
 					{
 						// tells us cache reads/writes/input/output
-						const usage = chunk.message.usage
+						const usage = chunk.message.usage;
 						yield {
 							type: "usage",
 							inputTokens: usage.input_tokens || 0,
 							outputTokens: usage.output_tokens || 0,
 							cacheWriteTokens: usage.cache_creation_input_tokens || undefined,
 							cacheReadTokens: usage.cache_read_input_tokens || undefined,
-						}
+						};
 					}
-					break
+					break;
 				case "message_delta":
 					// tells us stop_reason, stop_sequence, and output tokens along the way and at the end of the message
 
@@ -213,11 +246,11 @@ export class AnthropicHandler implements ApiHandler {
 						type: "usage",
 						inputTokens: 0,
 						outputTokens: chunk.usage.output_tokens || 0,
-					}
-					break
+					};
+					break;
 				case "message_stop":
 					// no usage data, just an indicator that the message is done
-					break
+					break;
 				case "content_block_start":
 					switch (chunk.content_block.type) {
 						case "thinking":
@@ -225,39 +258,39 @@ export class AnthropicHandler implements ApiHandler {
 								type: "reasoning",
 								reasoning: chunk.content_block.thinking || "",
 								signature: chunk.content_block.signature,
-							}
-							break
+							};
+							break;
 						case "redacted_thinking":
 							// Content is encrypted, and we don't to pass placeholder text back to the API
 							yield {
 								type: "reasoning",
 								reasoning: "[Redacted thinking block]",
 								redacted_data: chunk.content_block.data,
-							}
-							break
+							};
+							break;
 						case "tool_use":
 							if (chunk.content_block.id && chunk.content_block.name) {
 								// Convert Anthropic tool_use to OpenAI-compatible format
-								lastStartedToolCall.id = chunk.content_block.id
-								lastStartedToolCall.name = chunk.content_block.name
-								lastStartedToolCall.arguments = ""
+								lastStartedToolCall.id = chunk.content_block.id;
+								lastStartedToolCall.name = chunk.content_block.name;
+								lastStartedToolCall.arguments = "";
 							}
-							break
+							break;
 						case "text":
 							// we may receive multiple text blocks, in which case just insert a line break between them
 							if (chunk.index > 0) {
 								yield {
 									type: "text",
 									text: "\n",
-								}
+								};
 							}
 							yield {
 								type: "text",
 								text: chunk.content_block.text,
-							}
-							break
+							};
+							break;
 					}
-					break
+					break;
 				case "content_block_delta":
 					switch (chunk.delta.type) {
 						case "thinking_delta":
@@ -265,8 +298,8 @@ export class AnthropicHandler implements ApiHandler {
 							yield {
 								type: "reasoning",
 								reasoning: chunk.delta.thinking,
-							}
-							break
+							};
+							break;
 						case "signature_delta":
 							// It's used when sending the thinking block back to the API
 							// API expects this in completed form, not as array of deltas
@@ -275,17 +308,21 @@ export class AnthropicHandler implements ApiHandler {
 									type: "reasoning",
 									reasoning: "", // reasoning text is already sent via thinking_delta
 									signature: chunk.delta.signature,
-								}
+								};
 							}
-							break
+							break;
 						case "text_delta":
 							yield {
 								type: "text",
 								text: chunk.delta.text,
-							}
-							break
+							};
+							break;
 						case "input_json_delta":
-							if (lastStartedToolCall.id && lastStartedToolCall.name && chunk.delta.partial_json) {
+							if (
+								lastStartedToolCall.id &&
+								lastStartedToolCall.name &&
+								chunk.delta.partial_json
+							) {
 								// 	// Convert Anthropic tool_use to OpenAI-compatible format
 								yield {
 									type: "tool_calls",
@@ -298,30 +335,30 @@ export class AnthropicHandler implements ApiHandler {
 											arguments: chunk.delta.partial_json,
 										},
 									},
-								}
+								};
 							}
-							break
+							break;
 					}
-					break
+					break;
 
 				case "content_block_stop":
-					lastStartedToolCall.id = ""
-					lastStartedToolCall.name = ""
-					lastStartedToolCall.arguments = ""
-					break
+					lastStartedToolCall.id = "";
+					lastStartedToolCall.name = "";
+					lastStartedToolCall.arguments = "";
+					break;
 			}
 		}
 	}
 
 	getModel(): { id: AnthropicModelId; info: ModelInfo } {
-		const modelId = this.options.apiModelId
+		const modelId = this.options.apiModelId;
 		if (modelId && modelId in anthropicModels) {
-			const id = modelId as AnthropicModelId
-			return { id, info: anthropicModels[id] }
+			const id = modelId as AnthropicModelId;
+			return { id, info: anthropicModels[id] };
 		}
 		return {
 			id: anthropicDefaultModelId,
 			info: anthropicModels[anthropicDefaultModelId],
-		}
+		};
 	}
 }
