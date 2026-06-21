@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ClineLogoWhite from "@/assets/ClineLogoWhite";
+import FenneqLogo from "@/assets/FenneqLogo";
 import { Button } from "@/components/ui/button";
 import { useExtensionState } from "@/context/ExtensionStateContext";
 import { StateServiceClient } from "@/services/grpc-client";
@@ -37,7 +37,9 @@ const OnboardingView = () => {
 	return (
 		<div className="fixed inset-0 flex flex-col items-center justify-center px-6">
 			<div className="flex w-full max-w-md flex-col items-center gap-5">
-				<ClineLogoWhite className="size-16 flex-shrink-0" />
+				<div className="flex size-20 flex-shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-sm">
+					<FenneqLogo className="size-full object-contain" />
+				</div>
 
 				<div className="text-center">
 					<h2 className="m-0 text-2xl font-semibold">Welcome to Qortex</h2>
