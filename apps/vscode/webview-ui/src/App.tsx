@@ -1,20 +1,24 @@
-import type { Boolean, EmptyRequest } from "@shared/proto/cline/common"
-import { useCallback, useEffect } from "react"
-import AccountView from "./components/account/AccountView"
-import ChatView from "./components/chat/ChatView"
-import HistoryView from "./components/history/HistoryView"
-import McpView from "./components/mcp/configuration/McpConfigurationView"
-import OnboardingView from "./components/onboarding/OnboardingView"
-import SettingsView from "./components/settings/SettingsView"
-import WorktreesView from "./components/worktrees/WorktreesView"
-import { useClineAuth } from "./context/ClineAuthContext"
-import { useExtensionState } from "./context/ExtensionStateContext"
-import { Providers } from "./Providers"
-import { UiServiceClient } from "./services/grpc-client"
+import type {
+	EmptyRequest,
+	Boolean as ProtoBoolean,
+} from "@shared/proto/cline/common";
+import { useCallback, useEffect } from "react";
+import AccountView from "./components/account/AccountView";
+import ChatView from "./components/chat/ChatView";
+import HistoryView from "./components/history/HistoryView";
+import McpView from "./components/mcp/configuration/McpConfigurationView";
+import OnboardingView from "./components/onboarding/OnboardingView";
+import SettingsView from "./components/settings/SettingsView";
+import WorktreesView from "./components/worktrees/WorktreesView";
+import { useClineAuth } from "./context/ClineAuthContext";
+import { useExtensionState } from "./context/ExtensionStateContext";
+import { Providers } from "./Providers";
+import { UiServiceClient } from "./services/grpc-client";
 
 const AppContent = () => {
 	const {
 		didHydrateState,
+		apiConfiguration,
 		showWelcome,
 		shouldShowAnnouncement,
 		showMcp,
@@ -34,39 +38,59 @@ const AppContent = () => {
 		hideAccount,
 		hideWorktrees,
 		hideAnnouncement,
-	} = useExtensionState()
+	} = useExtensionState();
 
-	const { clineUser, organizations, activeOrganization } = useClineAuth()
+	const { clineUser, organizations, activeOrganization } = useClineAuth();
 
 	const showUpdateAnnouncementModal = useCallback(() => {
-		setShowAnnouncement(true)
+		setShowAnnouncement(true);
 		UiServiceClient.onDidShowAnnouncement({} as EmptyRequest)
-			.then((response: Boolean) => {
-				setShouldShowAnnouncement(response.value)
+			.then((response: ProtoBoolean) => {
+				setShouldShowAnnouncement(response.value);
 			})
 			.catch((error) => {
-				console.error("Failed to acknowledge announcement:", error)
-			})
-	}, [setShouldShowAnnouncement, setShowAnnouncement])
+				console.error("Failed to acknowledge announcement:", error);
+			});
+	}, [setShouldShowAnnouncement, setShowAnnouncement]);
 
 	useEffect(() => {
-		if (!didHydrateState || showWelcome || !shouldShowAnnouncement || showAnnouncement) {
-			return
+		if (
+			!didHydrateState ||
+			showWelcome ||
+			!shouldShowAnnouncement ||
+			showAnnouncement
+		) {
+			return;
 		}
-		showUpdateAnnouncementModal()
-	}, [didHydrateState, showWelcome, shouldShowAnnouncement, showAnnouncement, showUpdateAnnouncementModal])
+		showUpdateAnnouncementModal();
+	}, [
+		didHydrateState,
+		showWelcome,
+		shouldShowAnnouncement,
+		showAnnouncement,
+		showUpdateAnnouncementModal,
+	]);
 
 	if (!didHydrateState) {
-		return null
+		return null;
 	}
 
-	if (showWelcome) {
-		return <OnboardingView />
+	// BYOK gate: show the key form on first run OR whenever no Anthropic key is set.
+	// FenneQ can't talk to Claude without a key, so this replaces the chat-with-error
+	// state with a clear, prominent "enter your key" screen (robust to the welcome flag).
+	const hasApiKey = !!apiConfiguration?.apiKey?.trim();
+	if (showWelcome || !hasApiKey) {
+		return <OnboardingView />;
 	}
 
 	return (
 		<div className="flex h-screen w-full flex-col">
-			{showSettings && <SettingsView onDone={hideSettings} targetSection={settingsTargetSection} />}
+			{showSettings && (
+				<SettingsView
+					onDone={hideSettings}
+					targetSection={settingsTargetSection}
+				/>
+			)}
 			{showHistory && <HistoryView onDone={hideHistory} />}
 			{showMcp && <McpView initialTab={mcpTab} onDone={closeMcpView} />}
 			{showAccount && (
@@ -81,20 +105,22 @@ const AppContent = () => {
 			{/* Do not conditionally load ChatView, it's expensive and there's state we don't want to lose (user input, disableInput, askResponse promise, etc.) */}
 			<ChatView
 				hideAnnouncement={hideAnnouncement}
-				isHidden={showSettings || showHistory || showMcp || showAccount || showWorktrees}
+				isHidden={
+					showSettings || showHistory || showMcp || showAccount || showWorktrees
+				}
 				showAnnouncement={showAnnouncement}
 				showHistoryView={navigateToHistory}
 			/>
 		</div>
-	)
-}
+	);
+};
 
 const App = () => {
 	return (
 		<Providers>
 			<AppContent />
 		</Providers>
-	)
-}
+	);
+};
 
-export default App
+export default App;

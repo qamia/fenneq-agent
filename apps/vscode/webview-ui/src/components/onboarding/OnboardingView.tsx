@@ -36,15 +36,21 @@ const OnboardingView = () => {
 
 	return (
 		<div className="fixed inset-0 flex flex-col items-center justify-center px-6">
-			<div className="flex w-full max-w-md flex-col items-center gap-5">
+			<div className="flex w-full max-w-lg flex-col items-center gap-6 rounded-xl border border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)] p-8 shadow-lg">
 				<div className="flex size-20 flex-shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-sm">
 					<FenneqLogo className="size-full object-contain" />
 				</div>
 
 				<div className="text-center">
-					<h2 className="m-0 text-2xl font-semibold">Welcome to Qortex</h2>
-					<p className="mt-1 text-foreground/70">
-						Paste your Anthropic API key to start using FenneQ.
+					<p className="m-0 text-xs font-semibold uppercase tracking-wide text-foreground/50">
+						Welcome to Qortex
+					</p>
+					<h2 className="m-0 mt-1 text-3xl font-semibold">
+						Enter your Anthropic API key
+					</h2>
+					<p className="mt-2 text-sm text-foreground/70">
+						FenneQ uses your own Anthropic key to talk to Claude. It's stored
+						locally on this machine and never shared.
 					</p>
 				</div>
 
@@ -67,9 +73,8 @@ const OnboardingView = () => {
 				</Button>
 
 				<p className="m-0 text-center text-xs text-foreground/60">
-					Your key is stored locally on this machine and is used only to call
-					Anthropic directly. You pay Anthropic for your own usage. You can
-					change this anytime in settings.
+					Don't have a key? Get one at console.anthropic.com. You pay Anthropic
+					for your own usage.
 				</p>
 			</div>
 		</div>
