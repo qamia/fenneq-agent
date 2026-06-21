@@ -136,9 +136,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		),
 	);
 
-	// BYOK: on launch, if no Anthropic key is set, reveal the FenneQ panel and pop a
-	// prompt for the key right away (non-blocking). Stored locally; the agent then
-	// talks to Anthropic directly. The in-panel key form remains as a fallback.
+	// BYOK: on launch, if no Qortex key (the user's Anthropic key) is set, reveal the
+	// FenneQ panel and pop a prompt for it (non-blocking). Stored locally; the agent
+	// then talks to Anthropic directly.
 	void (async () => {
 		try {
 			if (
@@ -152,8 +152,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			const key = await vscode.window.showInputBox({
 				title: "Welcome to Qortex",
 				prompt:
-					"Paste your Anthropic API key to start using FenneQ — get one at console.anthropic.com/settings/keys. It's stored locally on this machine and never shared.",
-				placeHolder: "sk-ant-...",
+					"Paste your Qortex API key to start using FenneQ. It's stored locally on this machine and never shared.",
+				placeHolder: "Enter your Qortex key…",
 				password: true,
 				ignoreFocusOut: true,
 			});
@@ -166,7 +166,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				});
 				await webview.controller.postStateToWebview();
 				vscode.window.showInformationMessage(
-					"FenneQ is ready — your Anthropic key is saved locally.",
+					"FenneQ is ready — your Qortex key is saved locally.",
 				);
 			}
 		} catch (err) {

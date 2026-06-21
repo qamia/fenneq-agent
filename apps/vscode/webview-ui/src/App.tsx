@@ -18,7 +18,6 @@ import { UiServiceClient } from "./services/grpc-client";
 const AppContent = () => {
 	const {
 		didHydrateState,
-		apiConfiguration,
 		showWelcome,
 		shouldShowAnnouncement,
 		showMcp,
@@ -75,11 +74,7 @@ const AppContent = () => {
 		return null;
 	}
 
-	// BYOK gate: show the key form on first run OR whenever no Anthropic key is set.
-	// FenneQ can't talk to Claude without a key, so this replaces the chat-with-error
-	// state with a clear, prominent "enter your key" screen (robust to the welcome flag).
-	const hasApiKey = !!apiConfiguration?.apiKey?.trim();
-	if (showWelcome || !hasApiKey) {
+	if (showWelcome) {
 		return <OnboardingView />;
 	}
 
