@@ -68,6 +68,78 @@ import {
 import { ShowMessageType } from "./shared/proto/host/window";
 import { fileExistsAtPath } from "./utils/fs";
 
+// ── BYOK launch key modal (a big, centered, full-page "enter your Qortex key"
+// screen shown as an editor tab when no key is set) ───────────────────────────
+function makeNonce(): string {
+	const chars =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	let out = "";
+	for (let i = 0; i < 32; i++) {
+		out += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return out;
+}
+
+function buildQortexKeyModalHtml(nonce: string): string {
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; align-items: center; justify-content: center;
+    font-family: var(--vscode-font-family); color: var(--vscode-foreground);
+    background: var(--vscode-editor-background); }
+  .card { width: min(560px, 88vw); display: flex; flex-direction: column;
+    align-items: center; gap: 22px; text-align: center; padding: 24px; }
+  .badge { width: 84px; height: 84px; border-radius: 22px; background: #fff;
+    display: flex; align-items: center; justify-content: center; }
+  .badge svg { width: 56px; height: 56px; }
+  h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+  p.sub { margin: 0; font-size: 14px; color: var(--vscode-descriptionForeground); }
+  .field { width: 100%; }
+  input { width: 100%; box-sizing: border-box; font-size: 16px; padding: 16px 18px;
+    border-radius: 14px; border: 1px solid var(--vscode-input-border, var(--vscode-panel-border, #3a3a3a));
+    background: var(--vscode-input-background); color: var(--vscode-input-foreground); outline: none; }
+  input::placeholder { color: var(--vscode-input-placeholderForeground, #888); }
+  input:focus { border-color: var(--vscode-focusBorder); }
+  button { width: 100%; font-size: 15px; font-weight: 500; padding: 13px; border: none;
+    border-radius: 12px; cursor: pointer; background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground); }
+  button:hover { background: var(--vscode-button-hoverBackground); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .note { font-size: 12px; color: var(--vscode-descriptionForeground); margin: 0; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#1f8f4e" d="M6 3 H19 V7 H10 V11 H17 V15 H10 V21 H6 Z" /></svg>
+    </div>
+    <h1>Welcome to Qortex</h1>
+    <p class="sub">Enter your Qortex key to start using FenneQ</p>
+    <div class="field">
+      <input id="key" type="password" placeholder="Enter your Qortex key…" autocomplete="off" spellcheck="false" />
+    </div>
+    <button id="go" disabled>Start coding</button>
+    <p class="note">Stored locally on this machine. Never shared.</p>
+  </div>
+  <script nonce="${nonce}">
+    const vscode = acquireVsCodeApi();
+    const input = document.getElementById('key');
+    const go = document.getElementById('go');
+    const sync = () => { go.disabled = input.value.trim().length === 0; };
+    const submit = () => { const v = input.value.trim(); if (v) vscode.postMessage({ type: 'submitKey', key: v }); };
+    input.addEventListener('input', sync);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    go.addEventListener('click', submit);
+    input.focus();
+  </script>
+</body>
+</html>`;
+}
+
 // This method is called when the VS Code extension is activated.
 // NOTE: This is VS Code specific - services that should be registered
 // for all-platform should be registered in common.ts.
@@ -136,9 +208,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		),
 	);
 
-	// BYOK: on launch, if no Qortex key (the user's Anthropic key) is set, reveal the
-	// FenneQ panel and pop a prompt for it (non-blocking). Stored locally; the agent
-	// then talks to Anthropic directly.
+	// BYOK: on launch, if no Qortex key (the user's Anthropic key) is set, open a big
+	// centered key modal as a full-page editor tab. On submit it's stored locally and
+	// the FenneQ panel is revealed; the agent then talks to Anthropic directly.
 	void (async () => {
 		try {
 			if (
@@ -146,31 +218,38 @@ export async function activate(context: vscode.ExtensionContext) {
 			) {
 				return;
 			}
-			await vscode.commands
-				.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
-				.then(undefined, () => {});
-			const key = await vscode.window.showInputBox({
-				title: "Welcome to Qortex",
-				prompt:
-					"Paste your Qortex API key to start using FenneQ. It's stored locally on this machine and never shared.",
-				placeHolder: "Enter your Qortex key…",
-				password: true,
-				ignoreFocusOut: true,
-			});
-			const trimmed = key?.trim();
-			if (trimmed) {
+			const nonce = makeNonce();
+			const panel = vscode.window.createWebviewPanel(
+				"qortexKeySetup",
+				"Welcome to Qortex",
+				vscode.ViewColumn.Active,
+				{ enableScripts: true, retainContextWhenHidden: true },
+			);
+			panel.webview.html = buildQortexKeyModalHtml(nonce);
+			panel.webview.onDidReceiveMessage(async (msg) => {
+				if (msg?.type !== "submitKey") {
+					return;
+				}
+				const key = String(msg.key ?? "").trim();
+				if (!key) {
+					return;
+				}
 				const current = webview.controller.stateManager.getApiConfiguration();
 				webview.controller.stateManager.setApiConfiguration({
 					...current,
-					apiKey: trimmed,
+					apiKey: key,
 				});
 				await webview.controller.postStateToWebview();
+				panel.dispose();
+				await vscode.commands
+					.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
+					.then(undefined, () => {});
 				vscode.window.showInformationMessage(
 					"FenneQ is ready — your Qortex key is saved locally.",
 				);
-			}
+			});
 		} catch (err) {
-			Logger.error(`[BYOK] launch key prompt failed: ${err}`);
+			Logger.error(`[BYOK] launch key modal failed: ${err}`);
 		}
 	})();
 
