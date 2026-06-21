@@ -72,12 +72,12 @@ export const AnthropicProvider = ({
 
 	return (
 		<div>
-			{/* BYOK: the user pastes their own Anthropic key (stored in OS secret
-			    storage, used to call Anthropic directly). Then they pick a FenneQ tier. */}
+			{/* BYOK: the Qortex key (the user's own key) is normally entered via the
+			    launch prompt; this field lets them view/change it. Then pick a tier. */}
 			<ApiKeyField
 				initialValue={apiConfiguration?.apiKey || ""}
 				onChange={(value) => handleFieldChange("apiKey", value)}
-				providerName="Anthropic"
+				providerName="Qortex"
 				signupUrl="https://console.anthropic.com/settings/keys"
 			/>
 			{showModelOptions && (
