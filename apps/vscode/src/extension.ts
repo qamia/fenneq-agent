@@ -110,6 +110,8 @@ function buildQortexKeyModalHtml(nonce: string): string {
   button:hover { background: var(--vscode-button-hoverBackground); }
   button:disabled { opacity: 0.5; cursor: default; }
   .note { font-size: 12px; color: var(--vscode-descriptionForeground); margin: 0; }
+  .note a { color: var(--vscode-textLink-foreground); text-decoration: none; }
+  .note a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -123,6 +125,7 @@ function buildQortexKeyModalHtml(nonce: string): string {
       <input id="key" type="password" placeholder="Enter your Qortex key…" autocomplete="off" spellcheck="false" />
     </div>
     <button id="go" disabled>Start coding</button>
+    <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
     <p class="note">Stored locally on this machine. Never shared.</p>
   </div>
   <script nonce="${nonce}">

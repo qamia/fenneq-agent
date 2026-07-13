@@ -82,8 +82,8 @@
 					},
 					{
 						"id": "advanced-features",
-						"title": "Solar, Aurora & Comet — Your FenneQ Tiers",
-						"description": "Pick the right model per task. No API keys — FenneQ Cloud handles the model and billing.",
+						"title": "Zenith, Borealis & Solstice — Your FenneQ Tiers",
+						"description": "Pick the right model per task — all running on your own Qortex key, with per-task cost transparency.",
 						"media": {
 							"markdown": "walkthrough/step3.md"
 						}
