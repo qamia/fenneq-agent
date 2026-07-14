@@ -2,9 +2,9 @@
 
 **FenneQ gives you three model tiers. Choose one per task in the model selector** (bottom of the chat, or Settings → API Configuration → FenneQ tier).
 
-- **Zenith** — Claude Opus 4.8. Frontier reasoning for the hardest problems: deep refactors, tricky debugging, architecture.
-- **Borealis** — Claude Sonnet 4.6. The balanced everyday default — great for most coding.
-- **Solstice** — Claude Haiku 4.5. Fast and low-cost for quick edits, boilerplate, and high-volume work.
+- **Zenith** — Claude Opus 4.8. Frontier reasoning for the hardest problems: tricky formulations, solver debugging, model architecture.
+- **Borealis** — Claude Sonnet 4.6. The balanced everyday default — great for most modeling and solver work.
+- **Solstice** — Claude Haiku 4.5. Fast and low-cost for quick edits, data wrangling, and high-volume work.
 
 **Start on Borealis.** Drop to **Solstice** to save cost on simple work; reach for **Zenith** when a task is genuinely hard and you want the best reasoning.
 
