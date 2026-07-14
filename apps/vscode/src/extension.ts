@@ -87,67 +87,109 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
 <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
 <style>
+  :root {
+    --acc: #1f8f4e;
+    --acc-hi: #2aa35d;
+    --ink: var(--vscode-foreground);
+    --muted: var(--vscode-descriptionForeground);
+    --surface: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    --hairline: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+  }
+  * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body { display: flex; align-items: center; justify-content: center;
-    font-family: var(--vscode-font-family); color: var(--vscode-foreground);
-    /* dimmed backdrop, like a web modal overlay */
-    background: color-mix(in srgb, var(--vscode-editor-background) 55%, black); }
-  .card { width: min(560px, 88vw); display: flex; flex-direction: column;
-    align-items: center; gap: 22px; text-align: center; padding: 44px 40px 32px;
-    position: relative; border-radius: 16px;
-    background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
-    border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, #3a3a3a));
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55); }
-  .close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px;
+    font-family: var(--vscode-font-family); color: var(--ink);
+    /* layered backdrop: soft brand glow over a dimmed vignette */
+    background:
+      radial-gradient(640px 420px at 50% 32%, color-mix(in srgb, var(--acc) 14%, transparent), transparent 72%),
+      radial-gradient(120% 120% at 50% 110%, color-mix(in srgb, black 30%, transparent), transparent 60%),
+      color-mix(in srgb, var(--vscode-editor-background) 52%, black); }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(0.975); }
+    to { opacity: 1; transform: none; } }
+  .card { width: min(460px, 90vw); display: flex; flex-direction: column;
+    gap: 26px; text-align: center; padding: 44px 44px 30px; position: relative;
+    border-radius: 20px;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--surface) 94%, white), var(--surface) 38%);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, black 18%, transparent),
+      0 2px 6px rgba(0, 0, 0, 0.25),
+      0 32px 72px -20px rgba(0, 0, 0, 0.6),
+      0 0 90px -24px color-mix(in srgb, var(--acc) 42%, transparent);
+    animation: rise 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+  .close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px;
     display: flex; align-items: center; justify-content: center; border: none;
-    border-radius: 6px; background: transparent; cursor: pointer; font-size: 16px;
-    line-height: 1; color: var(--vscode-descriptionForeground); padding: 0; }
-  .close:hover { background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
-    color: var(--vscode-foreground); }
-  .badge { width: 84px; height: 84px; border-radius: 22px; background: #fff;
-    display: flex; align-items: center; justify-content: center; }
-  .badge svg { width: 56px; height: 56px; }
-  h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
-  p.sub { margin: 0; font-size: 14px; color: var(--vscode-descriptionForeground); }
+    border-radius: 8px; background: transparent; cursor: pointer; font-size: 14px;
+    line-height: 1; color: var(--muted); padding: 0; transition: all 0.15s ease; }
+  .close:hover { background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.18));
+    color: var(--ink); }
+  .head { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .badge { width: 66px; height: 66px; border-radius: 18px; margin-bottom: 8px;
+    background: linear-gradient(180deg, #ffffff, #eef3ef);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.25),
+      0 10px 36px -8px color-mix(in srgb, var(--acc) 55%, transparent); }
+  .badge svg { width: 40px; height: 40px; }
+  h1 { margin: 0; font-size: 23px; font-weight: 650; letter-spacing: -0.02em; }
+  p.sub { margin: 0; font-size: 13px; color: var(--muted); letter-spacing: 0.01em; }
+  .form { display: flex; flex-direction: column; gap: 14px; }
   .field { width: 100%; }
-  input { width: 100%; box-sizing: border-box; font-size: 16px; padding: 16px 18px;
-    border-radius: 14px; border: 1px solid var(--vscode-input-border, var(--vscode-panel-border, #3a3a3a));
-    background: var(--vscode-input-background); color: var(--vscode-input-foreground); outline: none; }
-  input::placeholder { color: var(--vscode-input-placeholderForeground, #888); }
-  input:focus { border-color: var(--vscode-focusBorder); }
-  button { width: 100%; font-size: 15px; font-weight: 500; padding: 13px; border: none;
-    border-radius: 12px; cursor: pointer; background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground); }
-  button:hover { background: var(--vscode-button-hoverBackground); }
-  button:disabled { opacity: 0.5; cursor: default; }
-  .note { font-size: 12px; color: var(--vscode-descriptionForeground); margin: 0; }
-  .note a { color: var(--vscode-textLink-foreground); text-decoration: none; }
+  input#key { width: 100%; font-size: 14px; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--vscode-foreground) 16%, transparent);
+    background: color-mix(in srgb, var(--vscode-input-background) 88%, transparent);
+    color: var(--vscode-input-foreground); outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+  input#key::placeholder { color: color-mix(in srgb, var(--muted) 80%, transparent); }
+  input#key:hover { border-color: color-mix(in srgb, var(--vscode-foreground) 26%, transparent); }
+  input#key:focus { border-color: var(--acc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 22%, transparent); }
+  .remember { display: flex; align-items: center; gap: 8px; font-size: 12px;
+    color: var(--muted); cursor: pointer; user-select: none; padding-left: 2px;
+    transition: color 0.15s ease; }
+  .remember:hover { color: var(--ink); }
+  .remember input { width: 14px; height: 14px; margin: 0; cursor: pointer; accent-color: var(--acc); }
+  button#go { width: 100%; font-size: 14px; font-weight: 600; padding: 13px;
+    border: none; border-radius: 12px; cursor: pointer; color: #fff;
+    background: linear-gradient(180deg, var(--acc-hi), var(--acc));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 10px -2px color-mix(in srgb, var(--acc) 60%, transparent);
+    transition: all 0.15s ease; letter-spacing: 0.01em; }
+  button#go:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 18px -4px color-mix(in srgb, var(--acc) 70%, transparent); }
+  button#go:active:not(:disabled) { transform: none; filter: brightness(0.97); }
+  button#go:disabled { cursor: default; filter: saturate(0.35); opacity: 0.55; box-shadow: none; }
+  .error { font-size: 12.5px; margin: -2px 0 0; color: var(--vscode-errorForeground, #f66); text-align: left; padding-left: 2px; }
+  .notice { font-size: 12.5px; margin: -8px 0 0; color: var(--vscode-editorWarning-foreground, #e2c08d); }
+  .notes { display: flex; flex-direction: column; gap: 3px; padding-top: 2px;
+    border-top: 1px solid var(--hairline); padding-top: 14px; }
+  .note { font-size: 11.5px; line-height: 1.55; color: color-mix(in srgb, var(--muted) 85%, transparent); margin: 0; }
+  .note a { color: var(--acc-hi); text-decoration: none; font-weight: 500; }
   .note a:hover { text-decoration: underline; }
-  .error { font-size: 13px; margin: 0; color: var(--vscode-errorForeground, #f66); }
-  .notice { font-size: 13px; margin: 0; color: var(--vscode-editorWarning-foreground, #e2c08d); }
-  .remember { width: 100%; display: flex; align-items: center; gap: 8px; font-size: 13px;
-    color: var(--vscode-descriptionForeground); cursor: pointer; user-select: none; }
-  .remember input { width: 15px; height: 15px; margin: 0; cursor: pointer;
-    accent-color: var(--vscode-button-background); }
 </style>
 </head>
 <body>
   <div class="card">
     <button class="close" id="close" title="Quit Qortex" aria-label="Quit Qortex">✕</button>
-    <div class="badge">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#1f8f4e" d="M6 3 H19 V7 H10 V11 H17 V15 H10 V21 H6 Z" /></svg>
+    <div class="head">
+      <div class="badge">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#1f8f4e" d="M6 3 H19 V7 H10 V11 H17 V15 H10 V21 H6 Z" /></svg>
+      </div>
+      <h1>Welcome to Qortex</h1>
+      <p class="sub">Enter your Qortex key to start using FenneQ</p>
+      ${notice ? `<p class="notice">${notice}</p>` : ""}
     </div>
-    <h1>Welcome to Qortex</h1>
-    <p class="sub">Enter your Qortex key to start using FenneQ</p>
-    ${notice ? `<p class="notice">${notice}</p>` : ""}
-    <div class="field">
-      <input id="key" type="password" placeholder="Enter your Qortex key…" autocomplete="off" spellcheck="false" />
+    <div class="form">
+      <div class="field">
+        <input id="key" type="password" placeholder="Enter your Qortex key…" autocomplete="off" spellcheck="false" />
+      </div>
+      <label class="remember"><input id="remember" type="checkbox" checked /> Remember this key on this device</label>
+      <p class="error" id="err" hidden></p>
+      <button id="go" disabled>Start coding</button>
     </div>
-    <label class="remember"><input id="remember" type="checkbox" checked /> Remember this key on this device</label>
-    <p class="error" id="err" hidden></p>
-    <button id="go" disabled>Start coding</button>
-    <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
-    <p class="note">Stored locally on this machine. Never shared.</p>
+    <div class="notes">
+      <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
+      <p class="note">Stored locally on this machine. Never shared.</p>
+    </div>
   </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
