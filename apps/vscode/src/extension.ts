@@ -80,7 +80,7 @@ function makeNonce(): string {
 	return out;
 }
 
-function buildQortexKeyModalHtml(nonce: string): string {
+function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -113,6 +113,11 @@ function buildQortexKeyModalHtml(nonce: string): string {
   .note a { color: var(--vscode-textLink-foreground); text-decoration: none; }
   .note a:hover { text-decoration: underline; }
   .error { font-size: 13px; margin: 0; color: var(--vscode-errorForeground, #f66); }
+  .notice { font-size: 13px; margin: 0; color: var(--vscode-editorWarning-foreground, #e2c08d); }
+  .remember { width: 100%; display: flex; align-items: center; gap: 8px; font-size: 13px;
+    color: var(--vscode-descriptionForeground); cursor: pointer; user-select: none; }
+  .remember input { width: 15px; height: 15px; margin: 0; cursor: pointer;
+    accent-color: var(--vscode-button-background); }
 </style>
 </head>
 <body>
@@ -122,9 +127,11 @@ function buildQortexKeyModalHtml(nonce: string): string {
     </div>
     <h1>Welcome to Qortex</h1>
     <p class="sub">Enter your Qortex key to start using FenneQ</p>
+    ${notice ? `<p class="notice">${notice}</p>` : ""}
     <div class="field">
       <input id="key" type="password" placeholder="Enter your Qortex key…" autocomplete="off" spellcheck="false" />
     </div>
+    <label class="remember"><input id="remember" type="checkbox" checked /> Remember this key on this device</label>
     <p class="error" id="err" hidden></p>
     <button id="go" disabled>Start coding</button>
     <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
@@ -144,7 +151,7 @@ function buildQortexKeyModalHtml(nonce: string): string {
       err.hidden = true;
       go.textContent = 'Checking your key…';
       sync();
-      vscode.postMessage({ type: 'submitKey', key: v });
+      vscode.postMessage({ type: 'submitKey', key: v, remember: document.getElementById('remember').checked });
     };
     window.addEventListener('message', (e) => {
       const msg = e.data;
@@ -263,16 +270,43 @@ export async function activate(context: vscode.ExtensionContext) {
 		),
 	);
 
-	// BYOK: on launch, if no Qortex key (the user's Anthropic key) is set, open a big
-	// centered key modal as a full-page editor tab. On submit it's stored locally and
-	// the FenneQ panel is revealed; the agent then talks to Anthropic directly.
+	// BYOK launch key gate:
+	// - No key saved → show the key modal.
+	// - Key saved but the user unchecked "Remember" last time → honor that: wipe
+	//   the session-only key and ask again.
+	// - Key saved and remembered → silently re-check it against Anthropic (fail
+	//   open on network trouble); if it was revoked, wipe it and ask again with a
+	//   notice. Valid → straight into the editor, no modal.
 	void (async () => {
 		try {
-			if (
-				webview.controller.stateManager.getApiConfiguration()?.apiKey?.trim()
-			) {
-				return;
+			const REMEMBER_FLAG = "qortex.rememberKeyOnDevice";
+			const clearSavedKey = async () => {
+				const current = webview.controller.stateManager.getApiConfiguration();
+				webview.controller.stateManager.setApiConfiguration({
+					...current,
+					apiKey: undefined,
+				});
+				await webview.controller.postStateToWebview();
+			};
+
+			const savedKey = webview.controller.stateManager
+				.getApiConfiguration()
+				?.apiKey?.trim();
+			const remembered = context.globalState.get<boolean>(REMEMBER_FLAG, true);
+			let notice: string | undefined;
+			if (savedKey && !remembered) {
+				await clearSavedKey();
+				notice =
+					"Enter your key to start this session — you chose not to stay signed in on this device.";
+			} else if (savedKey) {
+				if ((await validateAnthropicKey(savedKey)) === "ok") {
+					return; // remembered + still valid → no modal
+				}
+				await clearSavedKey();
+				notice =
+					"Your saved key is no longer valid — it may have been revoked. Enter a new one.";
 			}
+
 			const nonce = makeNonce();
 			const panel = vscode.window.createWebviewPanel(
 				"qortexKeySetup",
@@ -280,7 +314,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				vscode.ViewColumn.Active,
 				{ enableScripts: true, retainContextWhenHidden: true },
 			);
-			panel.webview.html = buildQortexKeyModalHtml(nonce);
+			panel.webview.html = buildQortexKeyModalHtml(nonce, notice);
 			panel.webview.onDidReceiveMessage(async (msg) => {
 				if (msg?.type !== "submitKey") {
 					return;
@@ -302,6 +336,8 @@ export async function activate(context: vscode.ExtensionContext) {
 					});
 					return;
 				}
+				const rememberChoice = msg.remember !== false;
+				await context.globalState.update(REMEMBER_FLAG, rememberChoice);
 				const current = webview.controller.stateManager.getApiConfiguration();
 				webview.controller.stateManager.setApiConfiguration({
 					...current,
@@ -313,7 +349,9 @@ export async function activate(context: vscode.ExtensionContext) {
 					.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
 					.then(undefined, () => {});
 				vscode.window.showInformationMessage(
-					"FenneQ is ready — your Qortex key is saved locally.",
+					rememberChoice
+						? "FenneQ is ready — your Qortex key is saved on this device."
+						: "FenneQ is ready for this session — you'll be asked for your key next time.",
 				);
 			});
 		} catch (err) {
