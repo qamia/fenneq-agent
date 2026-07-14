@@ -21,14 +21,16 @@
  * install); existing users' settings are never overwritten.
  */
 
-export const FENNEQ_SERVER_NAME = "fenneq"
+export const FENNEQ_SERVER_NAME = "fenneq";
 
 /**
- * The Fenneq MCP SSE endpoint. Defaults to the local server
- * (`scripts/run_http.py` on `FENNEQ_HTTP_PORT`, default 8765); override via the
- * `FENNEQ_MCP_URL` env var to point at a hosted deployment.
+ * Explicit deployment URL for a hosted Fenneq MCP server — UNSET by default.
+ * BYOK builds ship no knowledge server, and the old `http://127.0.0.1:8765/mcp`
+ * fallback seeded every fresh install with a dead "fenneq — offline" entry in
+ * the MCP view. Set `FENNEQ_MCP_URL` (e.g. in a managed/team build) to restore
+ * automatic seeding against a real deployment.
  */
-export const FENNEQ_MCP_URL = process.env.FENNEQ_MCP_URL?.trim() || "http://127.0.0.1:8765/mcp"
+export const FENNEQ_MCP_URL = process.env.FENNEQ_MCP_URL?.trim() || "";
 
 /**
  * A Fenneq MCP server entry (SSE transport). `type` MUST be set explicitly: the
@@ -36,9 +38,9 @@ export const FENNEQ_MCP_URL = process.env.FENNEQ_MCP_URL?.trim() || "http://127.
  * what we want, but we set it to avoid relying on union ordering.
  */
 export interface FenneqMcpServerConfig {
-	type: "sse"
-	url: string
-	headers?: Record<string, string>
+	type: "sse";
+	url: string;
+	headers?: Record<string, string>;
 }
 
 /**
@@ -46,25 +48,39 @@ export interface FenneqMcpServerConfig {
  * included only when a key is supplied (QAM-498); otherwise the entry is
  * configured but unauthenticated.
  */
-export function buildFenneqServerEntry(authToken?: string): FenneqMcpServerConfig {
+export function buildFenneqServerEntry(
+	authToken?: string,
+	url: string = FENNEQ_MCP_URL,
+): FenneqMcpServerConfig {
 	const entry: FenneqMcpServerConfig = {
 		type: "sse",
-		url: FENNEQ_MCP_URL,
-	}
+		url,
+	};
 	if (authToken) {
-		entry.headers = { Authorization: `Bearer ${authToken}` }
+		entry.headers = { Authorization: `Bearer ${authToken}` };
 	}
-	return entry
+	return entry;
 }
 
-/** The `mcpServers` map seeded into a fresh settings file. */
-export function defaultMcpServers(authToken?: string): Record<string, FenneqMcpServerConfig> {
-	return { [FENNEQ_SERVER_NAME]: buildFenneqServerEntry(authToken) }
+/**
+ * The `mcpServers` map seeded into a fresh settings file. Seeds the Fenneq
+ * server ONLY when a deployment URL is explicitly configured — otherwise a
+ * fresh install gets a clean, empty server list.
+ */
+export function defaultMcpServers(
+	authToken?: string,
+): Record<string, FenneqMcpServerConfig> {
+	if (!FENNEQ_MCP_URL) {
+		return {};
+	}
+	return { [FENNEQ_SERVER_NAME]: buildFenneqServerEntry(authToken) };
 }
 
 /** Full settings-file contents for a fresh install. */
-export function defaultMcpSettings(authToken?: string): { mcpServers: Record<string, FenneqMcpServerConfig> } {
-	return { mcpServers: defaultMcpServers(authToken) }
+export function defaultMcpSettings(authToken?: string): {
+	mcpServers: Record<string, FenneqMcpServerConfig>;
+} {
+	return { mcpServers: defaultMcpServers(authToken) };
 }
 
 /**
@@ -72,10 +88,13 @@ export function defaultMcpSettings(authToken?: string): { mcpServers: Record<str
  * header on the Fenneq entry, returning a new settings object (immutable). No-op if
  * the Fenneq server is absent (e.g. a user who deliberately removed it).
  */
-export function withFenneqAuth<T extends { mcpServers: Record<string, any> }>(settings: T, authToken: string): T {
-	const server = settings.mcpServers?.[FENNEQ_SERVER_NAME]
+export function withFenneqAuth<T extends { mcpServers: Record<string, any> }>(
+	settings: T,
+	authToken: string,
+): T {
+	const server = settings.mcpServers?.[FENNEQ_SERVER_NAME];
 	if (!server) {
-		return settings
+		return settings;
 	}
 	return {
 		...settings,
@@ -83,8 +102,11 @@ export function withFenneqAuth<T extends { mcpServers: Record<string, any> }>(se
 			...settings.mcpServers,
 			[FENNEQ_SERVER_NAME]: {
 				...server,
-				headers: { ...(server.headers ?? {}), Authorization: `Bearer ${authToken}` },
+				headers: {
+					...(server.headers ?? {}),
+					Authorization: `Bearer ${authToken}`,
+				},
 			},
 		},
-	}
+	};
 }
