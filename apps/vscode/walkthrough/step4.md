@@ -1,9 +1,9 @@
-# Your Team's Knowledge, Built In
+# Extend FenneQ with Your Team's Knowledge
 
-**FenneQ comes preconnected to the Fenneq knowledge server — no setup required.**
+**FenneQ speaks the Model Context Protocol (MCP) — plug in tools and knowledge sources and they become part of the agent.**
 
-Beyond the model's general knowledge, FenneQ taps your team's captured expertise over the Model Context Protocol (MCP): reusable **skills** (problem playbooks) and **lessons** (hard-won gotchas). Just pose a problem that matches one, or ask FenneQ to *"use the Fenneq tools to list available skills."*
+Teams can connect servers that expose reusable **skills** (problem playbooks) and **lessons** (hard-won gotchas), private docs, databases, and more. Once connected, just pose a problem — FenneQ pulls in what's relevant, or ask it directly to *"list the available tools."*
 
-Check the connection in the **MCP servers** view (the server icon at the top of the panel): **Connected**, **Authentication required** (sign in), or **Offline**.
+Manage connections in the **MCP servers** view (the server icon at the top of the panel): each server shows **Connected**, **Authentication required**, or **Offline**. Qamia team members: connect the Fenneq knowledge server here to get the team's captured expertise.
 
-> MCP is extensible — connect more tools and data sources as your team grows.
+> No servers configured? FenneQ works great without them — MCP is optional extra power, not a requirement.

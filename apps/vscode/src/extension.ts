@@ -112,6 +112,7 @@ function buildQortexKeyModalHtml(nonce: string): string {
   .note { font-size: 12px; color: var(--vscode-descriptionForeground); margin: 0; }
   .note a { color: var(--vscode-textLink-foreground); text-decoration: none; }
   .note a:hover { text-decoration: underline; }
+  .error { font-size: 13px; margin: 0; color: var(--vscode-errorForeground, #f66); }
 </style>
 </head>
 <body>
@@ -124,6 +125,7 @@ function buildQortexKeyModalHtml(nonce: string): string {
     <div class="field">
       <input id="key" type="password" placeholder="Enter your Qortex key…" autocomplete="off" spellcheck="false" />
     </div>
+    <p class="error" id="err" hidden></p>
     <button id="go" disabled>Start coding</button>
     <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
     <p class="note">Stored locally on this machine. Never shared.</p>
@@ -132,15 +134,65 @@ function buildQortexKeyModalHtml(nonce: string): string {
     const vscode = acquireVsCodeApi();
     const input = document.getElementById('key');
     const go = document.getElementById('go');
-    const sync = () => { go.disabled = input.value.trim().length === 0; };
-    const submit = () => { const v = input.value.trim(); if (v) vscode.postMessage({ type: 'submitKey', key: v }); };
-    input.addEventListener('input', sync);
+    const err = document.getElementById('err');
+    let busy = false;
+    const sync = () => { go.disabled = busy || input.value.trim().length === 0; };
+    const submit = () => {
+      const v = input.value.trim();
+      if (!v || busy) { return; }
+      busy = true;
+      err.hidden = true;
+      go.textContent = 'Checking your key…';
+      sync();
+      vscode.postMessage({ type: 'submitKey', key: v });
+    };
+    window.addEventListener('message', (e) => {
+      const msg = e.data;
+      if (msg && msg.type === 'keyStatus' && !msg.ok) {
+        busy = false;
+        go.textContent = 'Start coding';
+        err.textContent = msg.message;
+        err.hidden = false;
+        sync();
+        input.focus();
+      }
+    });
+    input.addEventListener('input', () => { err.hidden = true; sync(); });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
     go.addEventListener('click', submit);
     input.focus();
   </script>
 </body>
 </html>`;
+}
+
+/**
+ * Best-effort check that an Anthropic API key is real: GET /v1/models is free,
+ * fast, and returns 401 for a bad key. Network trouble must not lock the user
+ * out, so anything other than a definitive auth rejection counts as "ok".
+ */
+async function validateAnthropicKey(key: string): Promise<"ok" | "invalid"> {
+	try {
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 8000);
+		try {
+			const response = await fetch(
+				"https://api.anthropic.com/v1/models?limit=1",
+				{
+					method: "GET",
+					headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
+					signal: controller.signal,
+				},
+			);
+			return response.status === 401 || response.status === 403
+				? "invalid"
+				: "ok";
+		} finally {
+			clearTimeout(timeout);
+		}
+	} catch {
+		return "ok"; // offline / DNS / timeout — fail open
+	}
 }
 
 // This method is called when the VS Code extension is activated.
@@ -235,6 +287,19 @@ export async function activate(context: vscode.ExtensionContext) {
 				}
 				const key = String(msg.key ?? "").trim();
 				if (!key) {
+					return;
+				}
+				// Validate against Anthropic before saving so a mistyped key fails
+				// HERE (with a friendly message) instead of mid-task with a red error.
+				// Fail open on network problems — validation is best-effort.
+				const verdict = await validateAnthropicKey(key);
+				if (verdict === "invalid") {
+					panel.webview.postMessage({
+						type: "keyStatus",
+						ok: false,
+						message:
+							"That key doesn't look valid. Check it at console.anthropic.com/settings/keys and try again.",
+					});
 					return;
 				}
 				const current = webview.controller.stateManager.getApiConfiguration();
