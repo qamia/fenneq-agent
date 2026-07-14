@@ -90,9 +90,20 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
   html, body { height: 100%; margin: 0; }
   body { display: flex; align-items: center; justify-content: center;
     font-family: var(--vscode-font-family); color: var(--vscode-foreground);
-    background: var(--vscode-editor-background); }
+    /* dimmed backdrop, like a web modal overlay */
+    background: color-mix(in srgb, var(--vscode-editor-background) 55%, black); }
   .card { width: min(560px, 88vw); display: flex; flex-direction: column;
-    align-items: center; gap: 22px; text-align: center; padding: 24px; }
+    align-items: center; gap: 22px; text-align: center; padding: 44px 40px 32px;
+    position: relative; border-radius: 16px;
+    background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, #3a3a3a));
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55); }
+  .close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; border: none;
+    border-radius: 6px; background: transparent; cursor: pointer; font-size: 16px;
+    line-height: 1; color: var(--vscode-descriptionForeground); padding: 0; }
+  .close:hover { background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+    color: var(--vscode-foreground); }
   .badge { width: 84px; height: 84px; border-radius: 22px; background: #fff;
     display: flex; align-items: center; justify-content: center; }
   .badge svg { width: 56px; height: 56px; }
@@ -122,6 +133,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
 </head>
 <body>
   <div class="card">
+    <button class="close" id="close" title="Quit Qortex" aria-label="Quit Qortex">✕</button>
     <div class="badge">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#1f8f4e" d="M6 3 H19 V7 H10 V11 H17 V15 H10 V21 H6 Z" /></svg>
     </div>
@@ -167,6 +179,9 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
     input.addEventListener('input', () => { err.hidden = true; sync(); });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
     go.addEventListener('click', submit);
+    document.getElementById('close').addEventListener('click', () => {
+      vscode.postMessage({ type: 'closeModal' });
+    });
     input.focus();
   </script>
 </body>
@@ -315,7 +330,26 @@ export async function activate(context: vscode.ExtensionContext) {
 				{ enableScripts: true, retainContextWhenHidden: true },
 			);
 			panel.webview.html = buildQortexKeyModalHtml(nonce, notice);
+			// Modal semantics: the key is mandatory. Completing the form is the ONLY
+			// way past this screen — the ✕ button quits Qortex, closing the tab quits
+			// Qortex, and switching away snaps back to it.
+			let completed = false;
+			panel.onDidDispose(() => {
+				if (!completed) {
+					void vscode.commands.executeCommand("workbench.action.quit");
+				}
+			});
+			panel.onDidChangeViewState(() => {
+				if (!completed && !panel.active) {
+					panel.reveal(vscode.ViewColumn.Active);
+				}
+			});
 			panel.webview.onDidReceiveMessage(async (msg) => {
+				if (msg?.type === "closeModal") {
+					completed = true; // suppress the dispose handler; we're quitting anyway
+					await vscode.commands.executeCommand("workbench.action.quit");
+					return;
+				}
 				if (msg?.type !== "submitKey") {
 					return;
 				}
@@ -344,6 +378,7 @@ export async function activate(context: vscode.ExtensionContext) {
 					apiKey: key,
 				});
 				await webview.controller.postStateToWebview();
+				completed = true; // valid key — allow the modal to close normally
 				panel.dispose();
 				await vscode.commands
 					.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
