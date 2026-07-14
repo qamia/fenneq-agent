@@ -1,8 +1,8 @@
-import { access, constants, mkdir } from "fs/promises"
-import os from "os"
-import * as path from "path"
-import { HostProvider } from "@/hosts/host-provider"
-import { getCwd, getDesktopDir } from "@/utils/path"
+import { access, constants, mkdir } from "fs/promises";
+import os from "os";
+import * as path from "path";
+import { HostProvider } from "@/hosts/host-provider";
+import { getCwd, getDesktopDir } from "@/utils/path";
 
 /**
  * Gets the path to the shadow Git repository in globalStorage.
@@ -18,10 +18,14 @@ import { getCwd, getDesktopDir } from "@/utils/path"
  * @throws Error if global storage path is invalid
  */
 export async function getShadowGitPath(cwdHash: string): Promise<string> {
-	const checkpointsDir = path.join(HostProvider.get().globalStorageFsPath, "checkpoints", cwdHash)
-	await mkdir(checkpointsDir, { recursive: true })
-	const gitPath = path.join(checkpointsDir, ".git")
-	return gitPath
+	const checkpointsDir = path.join(
+		HostProvider.get().globalStorageFsPath,
+		"checkpoints",
+		cwdHash,
+	);
+	await mkdir(checkpointsDir, { recursive: true });
+	const gitPath = path.join(checkpointsDir, ".git");
+	return gitPath;
 }
 
 /**
@@ -41,30 +45,43 @@ export async function getShadowGitPath(cwdHash: string): Promise<string> {
  * @returns Promise<void> Resolves if the path is valid
  * @throws Error if the path is in a protected directory or if no read access
  */
-export async function validateWorkspacePath(workspacePath: string): Promise<void> {
+export async function validateWorkspacePath(
+	workspacePath: string,
+): Promise<void> {
 	// Check if directory exists and we have read permissions
 	try {
-		await access(workspacePath, constants.R_OK)
+		await access(workspacePath, constants.R_OK);
 	} catch (error) {
 		throw new Error(
 			`Cannot access workspace directory. Please ensure VS Code has permission to access your workspace. Error: ${error instanceof Error ? error.message : String(error)}`,
-		)
+		);
 	}
 
-	const homedir = os.homedir()
-	const desktopPath = getDesktopDir()
-	const documentsPath = path.join(homedir, "Documents")
-	const downloadsPath = path.join(homedir, "Downloads")
+	const homedir = os.homedir();
+	const desktopPath = getDesktopDir();
+	const documentsPath = path.join(homedir, "Documents");
+	const downloadsPath = path.join(homedir, "Downloads");
 
+	// Friendly, non-alarming copy: this is an expected limitation (we refuse to
+	// snapshot broad personal folders), not a failure. The webview shows messages
+	// containing "open a project folder" as a neutral notice instead of a red alert.
 	switch (workspacePath) {
 		case homedir:
-			throw new Error("Cannot use checkpoints in home directory")
+			throw new Error(
+				"Checkpoints are unavailable in your home folder — open a project folder to enable them.",
+			);
 		case desktopPath:
-			throw new Error("Cannot use checkpoints in Desktop directory")
+			throw new Error(
+				"Checkpoints are unavailable on the Desktop — open a project folder to enable them.",
+			);
 		case documentsPath:
-			throw new Error("Cannot use checkpoints in Documents directory")
+			throw new Error(
+				"Checkpoints are unavailable in Documents — open a project folder to enable them.",
+			);
 		case downloadsPath:
-			throw new Error("Cannot use checkpoints in Downloads directory")
+			throw new Error(
+				"Checkpoints are unavailable in Downloads — open a project folder to enable them.",
+			);
 	}
 }
 
@@ -85,13 +102,15 @@ export async function validateWorkspacePath(workspacePath: string): Promise<void
  * @throws Error if no workspace is detected, if in a protected directory, or if no read access
  */
 export async function getWorkingDirectory(): Promise<string> {
-	const cwd = await getCwd()
+	const cwd = await getCwd();
 	if (!cwd) {
-		throw new Error("No workspace detected. Please open Cline in a workspace to use checkpoints.")
+		throw new Error(
+			"No workspace detected. Please open Cline in a workspace to use checkpoints.",
+		);
 	}
 
-	await validateWorkspacePath(cwd)
-	return cwd
+	await validateWorkspacePath(cwd);
+	return cwd;
 }
 
 /**
@@ -102,13 +121,13 @@ export async function getWorkingDirectory(): Promise<string> {
  */
 export function hashWorkingDir(workingDir: string): string {
 	if (!workingDir) {
-		throw new Error("Working directory path cannot be empty")
+		throw new Error("Working directory path cannot be empty");
 	}
-	let hash = 0
+	let hash = 0;
 	for (let i = 0; i < workingDir.length; i++) {
-		hash = (hash * 31 + workingDir.charCodeAt(i)) >>> 0
+		hash = (hash * 31 + workingDir.charCodeAt(i)) >>> 0;
 	}
-	const bigHash = BigInt(hash)
-	const numericHash = bigHash.toString().slice(0, 13)
-	return numericHash
+	const bigHash = BigInt(hash);
+	const numericHash = bigHash.toString().slice(0, 13);
+	return numericHash;
 }
