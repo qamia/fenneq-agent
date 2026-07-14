@@ -184,7 +184,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       </div>
       <label class="remember"><input id="remember" type="checkbox" checked /> Remember this key on this device</label>
       <p class="error" id="err" hidden></p>
-      <button id="go" disabled>Start coding</button>
+      <button id="go" disabled>Start solving</button>
     </div>
     <div class="notes">
       <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
@@ -211,7 +211,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       const msg = e.data;
       if (msg && msg.type === 'keyStatus' && !msg.ok) {
         busy = false;
-        go.textContent = 'Start coding';
+        go.textContent = 'Start solving';
         err.textContent = msg.message;
         err.hidden = false;
         sync();

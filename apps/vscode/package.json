@@ -1,7 +1,7 @@
 {
 	"name": "claude-dev",
 	"displayName": "FenneQ",
-	"description": "FenneQ — Qamia's agentic coding platform, right in your IDE: plans, edits across files, runs commands, and connects to your Fenneq knowledge server.",
+	"description": "FenneQ — Qamia's agentic workbench for optimization problem-solving, right in your IDE: plans, builds and debugs models, edits across files, runs solvers, and connects to your Fenneq knowledge server.",
 	"version": "3.89.0",
 	"icon": "assets/icons/icon.png",
 	"engines": {
@@ -61,13 +61,13 @@
 		"walkthroughs": [
 			{
 				"id": "ClineWalkthrough",
-				"title": "Meet FenneQ, your new coding partner",
-				"description": "FenneQ codes like a developer because it thinks like one. Here are 5 ways to put it to work:",
+				"title": "Meet FenneQ, your optimization partner",
+				"description": "FenneQ tackles optimization problems like an OR engineer — modeling, solving, iterating. Here are 5 ways to put it to work:",
 				"steps": [
 					{
 						"id": "welcome",
 						"title": "Start with a Goal, Not Just a Prompt",
-						"description": "Tell FenneQ what you want to achieve. It plans, asks, and then codes, like a true partner.",
+						"description": "Tell FenneQ what you want to achieve. It plans, asks, then builds the model and the code — like a true partner.",
 						"media": {
 							"markdown": "walkthrough/step1.md"
 						}
@@ -90,8 +90,8 @@
 					},
 					{
 						"id": "mcp",
-						"title": "Your Team's Knowledge, Built In",
-						"description": "FenneQ comes preconnected to the Fenneq knowledge server — skills, lessons, and more.",
+						"title": "Extend FenneQ with Your Team's Knowledge",
+						"description": "Connect the Fenneq knowledge server over MCP for your team's captured skills and lessons.",
 						"media": {
 							"markdown": "walkthrough/step4.md"
 						}

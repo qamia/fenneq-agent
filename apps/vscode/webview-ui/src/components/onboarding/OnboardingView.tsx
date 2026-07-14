@@ -34,8 +34,8 @@ const OnboardingView = () => {
 				<div>
 					<h2 className="m-0 text-2xl font-semibold">Welcome to Qortex</h2>
 					<p className="mt-2 text-sm text-foreground/70">
-						Your AI coding companion, powered by FenneQ. Pick a tier — Zenith,
-						Borealis or Solstice — and start building.
+						Your AI partner for optimization problems, powered by FenneQ. Pick a
+						tier — Zenith, Borealis or Solstice — and start solving.
 					</p>
 				</div>
 				<Button
