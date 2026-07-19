@@ -51,15 +51,22 @@ export class AnthropicHandler implements ApiHandler {
 
 	private ensureClient(): Anthropic {
 		if (!this.client) {
-			// BYOK: use the user's own Anthropic key + the default Anthropic endpoint
-			// (or their custom base URL, if set). No proxy fallback.
 			const apiKey = this.options.apiKey;
 			if (!apiKey) {
 				throw new Error(
-					"No Anthropic API key set. Open FenneQ settings → API Configuration and paste your Anthropic API key (from console.anthropic.com).",
+					"No Qortex key set. Open FenneQ settings → API Configuration and enter the key from the Qortex portal.",
 				);
 			}
-			const baseURL = this.options.anthropicBaseUrl || undefined;
+			// Qortex keys (subscription tokens, "qtx-…") are powered by the Qortex
+			// proxy: it verifies the subscription against the portal and holds the
+			// org Anthropic key — customer devices never see it. A directly-supplied
+			// Anthropic key (advanced/BYOK via settings) still talks to Anthropic.
+			const isQortexKey = apiKey.startsWith("qtx-");
+			const qortexProxyUrl =
+				process.env.QORTEX_AI_PROXY_URL?.trim() || "http://localhost:8080";
+			const baseURL =
+				this.options.anthropicBaseUrl ||
+				(isQortexKey ? qortexProxyUrl : undefined);
 			try {
 				this.client = new Anthropic({
 					apiKey,
