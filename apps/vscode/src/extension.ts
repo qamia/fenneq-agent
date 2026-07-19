@@ -195,7 +195,6 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
     </div>
     <div class="notes">
       <p class="note"><strong>Want to subscribe?</strong> Choose a plan and register at <a href="${QORTEX_SUBSCRIBE_URL}">the Qortex portal</a>.</p>
-      <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
       <p class="note">Stored locally on this machine. Never shared.</p>
     </div>
   </div>
