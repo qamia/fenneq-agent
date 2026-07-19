@@ -70,6 +70,13 @@ import { fileExistsAtPath } from "./utils/fs";
 
 // ── BYOK launch key modal (a big, centered, full-page "enter your Qortex key"
 // screen shown as an editor tab when no key is set) ───────────────────────────
+
+/**
+ * The Qortex subscription/registration portal (Vercel). Shown as the
+ * "Want to subscribe?" link on the key modal. Currently the auto-generated
+ * deployment URL; swap for a custom domain when one exists.
+ */
+const QORTEX_SUBSCRIBE_URL = "https://regis-rosy-ten.vercel.app/";
 function makeNonce(): string {
 	const chars =
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -187,6 +194,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       <button id="go" disabled>Start solving</button>
     </div>
     <div class="notes">
+      <p class="note"><strong>Want to subscribe?</strong> Choose a plan and register at <a href="${QORTEX_SUBSCRIBE_URL}">the Qortex portal</a>.</p>
       <p class="note">Your Qortex key is your Anthropic API key — get one at <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a>.</p>
       <p class="note">Stored locally on this machine. Never shared.</p>
     </div>
