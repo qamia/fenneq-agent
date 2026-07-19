@@ -211,7 +211,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       </div>
       <h1>Welcome to Qortex</h1>
       <p class="sub">Enter your Qortex key to start using FenneQ</p>
-      ${notice ? `<p class="notice">${notice}</p>` : ""}
+      <p class="notice" id="notice" ${notice ? "" : "hidden"}>${notice ?? ""}</p>
     </div>
     <div class="form">
       <div class="field">
@@ -231,6 +231,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
     const input = document.getElementById('key');
     const go = document.getElementById('go');
     const err = document.getElementById('err');
+    const notice = document.getElementById('notice');
     let busy = false;
     let lastPrefill = '';
     const sync = () => { go.disabled = busy || input.value.trim().length === 0; };
@@ -256,12 +257,17 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
         input.focus();
         return;
       }
-      // A fresh qtx-… key found on the clipboard: fill and go, hands-free.
-      if (msg && msg.type === 'prefillKey' && !busy && msg.key !== lastPrefill) {
+      // A fresh qtx-… key found on the clipboard: fill it in, but signing in
+      // stays a deliberate click — auto-submitting here logs the user in
+      // silently whenever an old key lingers on the clipboard.
+      if (msg && msg.type === 'prefillKey' && !busy && msg.key !== lastPrefill && !input.value) {
         lastPrefill = msg.key;
         input.value = msg.key;
+        err.hidden = true;
+        notice.textContent = 'We found a Qortex key on your clipboard — press Start solving to use it.';
+        notice.hidden = false;
         sync();
-        submit();
+        input.focus();
       }
     });
     input.addEventListener('input', () => { err.hidden = true; sync(); });
