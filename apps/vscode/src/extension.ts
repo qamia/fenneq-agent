@@ -238,26 +238,36 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
 }
 
 /**
- * Best-effort check that an Anthropic API key is real: GET /v1/models is free,
- * fast, and returns 401 for a bad key. Network trouble must not lock the user
- * out, so anything other than a definitive auth rejection counts as "ok".
+ * Validate/activate a Qortex key (a subscription token from the Qortex portal)
+ * against the portal's /api/activate:
+ * - 200  → valid (first activation, or re-login on a still-valid subscription)
+ * - 404/400 → the key doesn't exist / is malformed
+ * - 403  → the subscription expired
+ * Network trouble or portal 5xx must not lock the user out → fail open.
  */
-async function validateAnthropicKey(key: string): Promise<"ok" | "invalid"> {
+async function validateQortexKey(
+	key: string,
+): Promise<"ok" | "invalid" | "expired"> {
 	try {
 		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), 8000);
+		const timeout = setTimeout(() => controller.abort(), 10000);
 		try {
-			const response = await fetch(
-				"https://api.anthropic.com/v1/models?limit=1",
-				{
-					method: "GET",
-					headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
-					signal: controller.signal,
-				},
-			);
-			return response.status === 401 || response.status === 403
-				? "invalid"
-				: "ok";
+			const response = await fetch(`${QORTEX_SUBSCRIBE_URL}api/activate`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ token: key }),
+				signal: controller.signal,
+			});
+			if (response.ok) {
+				return "ok";
+			}
+			if (response.status === 403) {
+				return "expired";
+			}
+			if (response.status === 404 || response.status === 400) {
+				return "invalid";
+			}
+			return "ok"; // portal-side 5xx — don't lock users out
 		} finally {
 			clearTimeout(timeout);
 		}
@@ -363,12 +373,15 @@ export async function activate(context: vscode.ExtensionContext) {
 				notice =
 					"Enter your key to start this session — you chose not to stay signed in on this device.";
 			} else if (savedKey) {
-				if ((await validateAnthropicKey(savedKey)) === "ok") {
+				const verdict = await validateQortexKey(savedKey);
+				if (verdict === "ok") {
 					return; // remembered + still valid → no modal
 				}
 				await clearSavedKey();
 				notice =
-					"Your saved key is no longer valid — it may have been revoked. Enter a new one.";
+					verdict === "expired"
+						? "Your subscription has expired — renew your plan at the Qortex portal, then enter your new key."
+						: "Your saved key is no longer valid. Enter a new one.";
 			}
 
 			const nonce = makeNonce();
@@ -406,16 +419,18 @@ export async function activate(context: vscode.ExtensionContext) {
 				if (!key) {
 					return;
 				}
-				// Validate against Anthropic before saving so a mistyped key fails
-				// HERE (with a friendly message) instead of mid-task with a red error.
-				// Fail open on network problems — validation is best-effort.
-				const verdict = await validateAnthropicKey(key);
-				if (verdict === "invalid") {
+				// Validate/activate the Qortex key against the portal before saving,
+				// so a bad key fails HERE with a friendly message. Fail open on
+				// network problems — validation is best-effort.
+				const verdict = await validateQortexKey(key);
+				if (verdict !== "ok") {
 					panel.webview.postMessage({
 						type: "keyStatus",
 						ok: false,
 						message:
-							"That key doesn't look valid. Check it at console.anthropic.com/settings/keys and try again.",
+							verdict === "expired"
+								? "This subscription has expired. Renew your plan at the Qortex portal to get a new key."
+								: "That Qortex key isn't valid. Check the key from the Qortex portal and try again.",
 					});
 					return;
 				}
