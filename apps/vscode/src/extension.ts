@@ -222,7 +222,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       <button id="go" disabled>Start solving</button>
     </div>
     <div class="notes">
-      <p class="note"><strong>Want to subscribe?</strong> Get your key at <a href="${QORTEX_SUBSCRIBE_URL}activate?plan=pro-plus&from=app">the Qortex portal</a> — it can send it straight back here.</p>
+      <p class="note"><strong>Want to subscribe?</strong> Get your key at <a href="${QORTEX_SUBSCRIBE_URL}">the Qortex portal</a> — it can send it straight back here.</p>
       <p class="note">Stored locally on this machine. Never shared.</p>
     </div>
   </div>
