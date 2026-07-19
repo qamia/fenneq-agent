@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 
 import assert from "node:assert";
+import { createHash } from "node:crypto";
 import { DIFF_VIEW_URI_SCHEME } from "@hosts/vscode/VscodeDiffViewProvider";
 import * as vscode from "vscode";
 import { Logger } from "@/shared/services/Logger";
@@ -77,6 +78,28 @@ import { fileExistsAtPath } from "./utils/fs";
  * deployment URL; swap for a custom domain when one exists.
  */
 const QORTEX_SUBSCRIBE_URL = "https://regis-rosy-ten.vercel.app/";
+
+/** Shape a Qortex key must have before we bother the portal with it. */
+const QORTEX_KEY_PATTERN = /^qtx-(pro|proplus|ultra)-[A-Za-z0-9_-]{16,}$/;
+
+/** globalState key caching the last successful validation: {hash, plan, endsAt}. */
+const KEY_CACHE_FLAG = "qortex.keyValidationCache";
+
+// Deep-link plumbing (qortex://saoudrizwan.claude-dev/activate?token=…):
+// the URI handler may fire before or after the launch gate has set up, and the
+// key modal must be closable from outside its closure (its dispose guard quits
+// the app unless `complete()` ran first — see the gate).
+let qortexKeyModal: {
+	panel: vscode.WebviewPanel;
+	complete: () => void;
+} | null = null;
+let applyQortexActivation: ((token: string) => Promise<boolean>) | null = null;
+let pendingActivationToken: string | null = null;
+
+function hashKey(key: string): string {
+	return createHash("sha256").update(key).digest("hex").slice(0, 32);
+}
+
 function makeNonce(): string {
 	const chars =
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -165,6 +188,11 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 18px -4px color-mix(in srgb, var(--acc) 70%, transparent); }
   button#go:active:not(:disabled) { transform: none; filter: brightness(0.97); }
   button#go:disabled { cursor: default; filter: saturate(0.35); opacity: 0.55; box-shadow: none; }
+  button#go.working::before { content: ''; display: inline-block; width: 12px; height: 12px;
+    margin-right: 8px; vertical-align: -2px; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff;
+    animation: whirl 0.8s linear infinite; }
+  @keyframes whirl { to { transform: rotate(360deg); } }
   .error { font-size: 12.5px; margin: -2px 0 0; color: var(--vscode-errorForeground, #f66); text-align: left; padding-left: 2px; }
   .notice { font-size: 12.5px; margin: -8px 0 0; color: var(--vscode-editorWarning-foreground, #e2c08d); }
   .notes { display: flex; flex-direction: column; gap: 3px; padding-top: 2px;
@@ -194,7 +222,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       <button id="go" disabled>Start solving</button>
     </div>
     <div class="notes">
-      <p class="note"><strong>Want to subscribe?</strong> Choose a plan and register at <a href="${QORTEX_SUBSCRIBE_URL}">the Qortex portal</a>.</p>
+      <p class="note"><strong>Want to subscribe?</strong> Get your key at <a href="${QORTEX_SUBSCRIBE_URL}activate?plan=pro-plus&from=app">the Qortex portal</a> — it can send it straight back here.</p>
       <p class="note">Stored locally on this machine. Never shared.</p>
     </div>
   </div>
@@ -204,6 +232,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
     const go = document.getElementById('go');
     const err = document.getElementById('err');
     let busy = false;
+    let lastPrefill = '';
     const sync = () => { go.disabled = busy || input.value.trim().length === 0; };
     const submit = () => {
       const v = input.value.trim();
@@ -211,6 +240,7 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       busy = true;
       err.hidden = true;
       go.textContent = 'Checking your key…';
+      go.classList.add('working');
       sync();
       vscode.postMessage({ type: 'submitKey', key: v, remember: document.getElementById('remember').checked });
     };
@@ -219,10 +249,19 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
       if (msg && msg.type === 'keyStatus' && !msg.ok) {
         busy = false;
         go.textContent = 'Start solving';
+        go.classList.remove('working');
         err.textContent = msg.message;
         err.hidden = false;
         sync();
         input.focus();
+        return;
+      }
+      // A fresh qtx-… key found on the clipboard: fill and go, hands-free.
+      if (msg && msg.type === 'prefillKey' && !busy && msg.key !== lastPrefill) {
+        lastPrefill = msg.key;
+        input.value = msg.key;
+        sync();
+        submit();
       }
     });
     input.addEventListener('input', () => { err.hidden = true; sync(); });
@@ -245,12 +284,17 @@ function buildQortexKeyModalHtml(nonce: string, notice?: string): string {
  * - 403  → the subscription expired
  * Network trouble or portal 5xx must not lock the user out → fail open.
  */
-async function validateQortexKey(
-	key: string,
-): Promise<"ok" | "invalid" | "expired"> {
+interface QortexKeyVerdict {
+	verdict: "ok" | "invalid" | "expired";
+	plan?: string;
+	endsAt?: string;
+}
+
+async function validateQortexKey(key: string): Promise<QortexKeyVerdict> {
 	try {
 		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), 10000);
+		// Fail-open policy makes long waits pure downside — keep the budget short.
+		const timeout = setTimeout(() => controller.abort(), 4000);
 		try {
 			const response = await fetch(`${QORTEX_SUBSCRIBE_URL}api/activate`, {
 				method: "POST",
@@ -259,20 +303,24 @@ async function validateQortexKey(
 				signal: controller.signal,
 			});
 			if (response.ok) {
-				return "ok";
+				const data = (await response.json().catch(() => ({}))) as {
+					plan?: string;
+					endsAt?: string;
+				};
+				return { verdict: "ok", plan: data.plan, endsAt: data.endsAt };
 			}
 			if (response.status === 403) {
-				return "expired";
+				return { verdict: "expired" };
 			}
 			if (response.status === 404 || response.status === 400) {
-				return "invalid";
+				return { verdict: "invalid" };
 			}
-			return "ok"; // portal-side 5xx — don't lock users out
+			return { verdict: "ok" }; // portal-side 5xx — don't lock users out
 		} finally {
 			clearTimeout(timeout);
 		}
 	} catch {
-		return "ok"; // offline / DNS / timeout — fail open
+		return { verdict: "ok" }; // offline / DNS / timeout — fail open
 	}
 }
 
@@ -348,20 +396,192 @@ export async function activate(context: vscode.ExtensionContext) {
 	// - No key saved → show the key modal.
 	// - Key saved but the user unchecked "Remember" last time → honor that: wipe
 	//   the session-only key and ask again.
-	// - Key saved and remembered → silently re-check it against Anthropic (fail
-	//   open on network trouble); if it was revoked, wipe it and ask again with a
-	//   notice. Valid → straight into the editor, no modal.
+	// - Key saved and remembered → enter INSTANTLY from the cached validation
+	//   when the subscription is known-good for >24h (refresh in the background);
+	//   otherwise re-check against the portal (fail open). Revoked/expired →
+	//   wipe and ask again with a notice.
+	// The modal is escape-proof but polite: ✕/close asks before quitting, a
+	// qtx-… key on the clipboard auto-fills and submits, and a deep link
+	// (qortex://…/activate?token=…) completes the whole thing hands-free.
+	const REMEMBER_FLAG = "qortex.rememberKeyOnDevice";
+
+	const saveValidatedKey = async (
+		key: string,
+		rememberChoice: boolean,
+		info: QortexKeyVerdict,
+	) => {
+		await context.globalState.update(REMEMBER_FLAG, rememberChoice);
+		await context.globalState.update(KEY_CACHE_FLAG, {
+			hash: hashKey(key),
+			plan: info.plan,
+			endsAt: info.endsAt,
+		});
+		const current = webview.controller.stateManager.getApiConfiguration();
+		webview.controller.stateManager.setApiConfiguration({
+			...current,
+			apiKey: key,
+		});
+		await webview.controller.postStateToWebview();
+	};
+
+	const clearSavedKey = async () => {
+		await context.globalState.update(KEY_CACHE_FLAG, undefined);
+		const current = webview.controller.stateManager.getApiConfiguration();
+		webview.controller.stateManager.setApiConfiguration({
+			...current,
+			apiKey: undefined,
+		});
+		await webview.controller.postStateToWebview();
+	};
+
+	const keyErrorMessage = (verdict: "invalid" | "expired") =>
+		verdict === "expired"
+			? "This subscription has expired. Renew your plan at the Qortex portal to get a new key."
+			: "That Qortex key isn't valid. Check the key from the Qortex portal and try again.";
+
+	const openKeyModal = (notice?: string) => {
+		const nonce = makeNonce();
+		const panel = vscode.window.createWebviewPanel(
+			"qortexKeySetup",
+			"Welcome to Qortex",
+			vscode.ViewColumn.Active,
+			{ enableScripts: true, retainContextWhenHidden: true },
+		);
+		panel.webview.html = buildQortexKeyModalHtml(nonce, notice);
+		let completed = false;
+		qortexKeyModal = {
+			panel,
+			complete: () => {
+				completed = true;
+			},
+		};
+		// Warm the portal's serverless functions while the user reads the modal,
+		// so their eventual click doesn't pay the cold-start.
+		void fetch(`${QORTEX_SUBSCRIBE_URL}api/activate`).catch(() => {});
+		void fetch(`${QORTEX_SUBSCRIBE_URL}api/token`).catch(() => {});
+
+		const confirmQuit = async () => {
+			const pick = await vscode.window.showWarningMessage(
+				"Quit Qortex? A Qortex key is required to continue.",
+				{ modal: true },
+				"Quit Qortex",
+			);
+			return pick === "Quit Qortex";
+		};
+		// A qtx-… key on the clipboard (fresh from the portal) auto-fills the
+		// form the moment the user comes back.
+		const tryClipboardPrefill = async () => {
+			try {
+				const clip = (await readTextFromClipboard())?.trim();
+				if (clip && QORTEX_KEY_PATTERN.test(clip)) {
+					panel.webview.postMessage({ type: "prefillKey", key: clip });
+				}
+			} catch {
+				/* clipboard unavailable — ignore */
+			}
+		};
+		void tryClipboardPrefill();
+
+		panel.onDidDispose(() => {
+			if (qortexKeyModal?.panel === panel) {
+				qortexKeyModal = null;
+			}
+			if (!completed) {
+				// The tab was closed without a key: confirm the quit; "stay" reopens.
+				void (async () => {
+					if (await confirmQuit()) {
+						void vscode.commands.executeCommand("workbench.action.quit");
+					} else {
+						openKeyModal(notice);
+					}
+				})();
+			}
+		});
+		panel.onDidChangeViewState(() => {
+			if (completed) {
+				return;
+			}
+			if (!panel.active) {
+				panel.reveal(vscode.ViewColumn.Active);
+			} else {
+				void tryClipboardPrefill();
+			}
+		});
+		panel.webview.onDidReceiveMessage(async (msg) => {
+			if (msg?.type === "closeModal") {
+				if (await confirmQuit()) {
+					completed = true; // suppress the dispose handler; we're quitting anyway
+					await vscode.commands.executeCommand("workbench.action.quit");
+				}
+				return;
+			}
+			if (msg?.type !== "submitKey") {
+				return;
+			}
+			const key = String(msg.key ?? "").trim();
+			if (!key) {
+				return;
+			}
+			// Validate/activate the Qortex key against the portal before saving,
+			// so a bad key fails HERE with a friendly message. Fail open on
+			// network problems — validation is best-effort.
+			const result = await validateQortexKey(key);
+			if (result.verdict !== "ok") {
+				panel.webview.postMessage({
+					type: "keyStatus",
+					ok: false,
+					message: keyErrorMessage(result.verdict),
+				});
+				return;
+			}
+			const rememberChoice = msg.remember !== false;
+			await saveValidatedKey(key, rememberChoice, result);
+			completed = true; // valid key — allow the modal to close normally
+			panel.dispose();
+			await vscode.commands
+				.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
+				.then(undefined, () => {});
+			vscode.window.showInformationMessage(
+				rememberChoice
+					? "FenneQ is ready — your Qortex key is saved on this device."
+					: "FenneQ is ready for this session — you'll be asked for your key next time.",
+			);
+		});
+	};
+
+	// Deep-link completion (qortex://…/activate?token=…): validate, save as
+	// remembered, close any open key modal, land in FenneQ. Returns success.
+	applyQortexActivation = async (token: string) => {
+		const result = await validateQortexKey(token);
+		if (result.verdict !== "ok") {
+			vscode.window.showErrorMessage(keyErrorMessage(result.verdict));
+			return false;
+		}
+		await saveValidatedKey(token, true, result);
+		if (qortexKeyModal) {
+			qortexKeyModal.complete();
+			qortexKeyModal.panel.dispose();
+			qortexKeyModal = null;
+		}
+		await vscode.commands
+			.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
+			.then(undefined, () => {});
+		vscode.window.showInformationMessage(
+			"FenneQ is ready — your Qortex key is saved on this device.",
+		);
+		return true;
+	};
+
 	void (async () => {
 		try {
-			const REMEMBER_FLAG = "qortex.rememberKeyOnDevice";
-			const clearSavedKey = async () => {
-				const current = webview.controller.stateManager.getApiConfiguration();
-				webview.controller.stateManager.setApiConfiguration({
-					...current,
-					apiKey: undefined,
-				});
-				await webview.controller.postStateToWebview();
-			};
+			// A deep link that raced ahead of the gate wins outright.
+			if (pendingActivationToken) {
+				const token = pendingActivationToken;
+				pendingActivationToken = null;
+				if (await applyQortexActivation?.(token)) {
+					return;
+				}
+			}
 
 			const savedKey = webview.controller.stateManager
 				.getApiConfiguration()
@@ -373,86 +593,46 @@ export async function activate(context: vscode.ExtensionContext) {
 				notice =
 					"Enter your key to start this session — you chose not to stay signed in on this device.";
 			} else if (savedKey) {
-				const verdict = await validateQortexKey(savedKey);
-				if (verdict === "ok") {
-					return; // remembered + still valid → no modal
+				// Cache fast-path: a subscription known-good for >24h means zero
+				// network before the editor — refresh the cache in the background.
+				const cache = context.globalState.get<{
+					hash: string;
+					plan?: string;
+					endsAt?: string;
+				}>(KEY_CACHE_FLAG);
+				const endsMs = cache?.endsAt ? Date.parse(cache.endsAt) : Number.NaN;
+				if (
+					cache?.hash === hashKey(savedKey) &&
+					Number.isFinite(endsMs) &&
+					endsMs - Date.now() > 24 * 60 * 60 * 1000
+				) {
+					void validateQortexKey(savedKey).then((r) => {
+						void context.globalState.update(
+							KEY_CACHE_FLAG,
+							r.verdict === "ok"
+								? { hash: hashKey(savedKey), plan: r.plan, endsAt: r.endsAt }
+								: undefined, // revoked mid-cycle → next launch re-checks
+						);
+					});
+					return;
+				}
+				const result = await validateQortexKey(savedKey);
+				if (result.verdict === "ok") {
+					await context.globalState.update(KEY_CACHE_FLAG, {
+						hash: hashKey(savedKey),
+						plan: result.plan,
+						endsAt: result.endsAt,
+					});
+					return;
 				}
 				await clearSavedKey();
 				notice =
-					verdict === "expired"
+					result.verdict === "expired"
 						? "Your subscription has expired — renew your plan at the Qortex portal, then enter your new key."
 						: "Your saved key is no longer valid. Enter a new one.";
 			}
 
-			const nonce = makeNonce();
-			const panel = vscode.window.createWebviewPanel(
-				"qortexKeySetup",
-				"Welcome to Qortex",
-				vscode.ViewColumn.Active,
-				{ enableScripts: true, retainContextWhenHidden: true },
-			);
-			panel.webview.html = buildQortexKeyModalHtml(nonce, notice);
-			// Modal semantics: the key is mandatory. Completing the form is the ONLY
-			// way past this screen — the ✕ button quits Qortex, closing the tab quits
-			// Qortex, and switching away snaps back to it.
-			let completed = false;
-			panel.onDidDispose(() => {
-				if (!completed) {
-					void vscode.commands.executeCommand("workbench.action.quit");
-				}
-			});
-			panel.onDidChangeViewState(() => {
-				if (!completed && !panel.active) {
-					panel.reveal(vscode.ViewColumn.Active);
-				}
-			});
-			panel.webview.onDidReceiveMessage(async (msg) => {
-				if (msg?.type === "closeModal") {
-					completed = true; // suppress the dispose handler; we're quitting anyway
-					await vscode.commands.executeCommand("workbench.action.quit");
-					return;
-				}
-				if (msg?.type !== "submitKey") {
-					return;
-				}
-				const key = String(msg.key ?? "").trim();
-				if (!key) {
-					return;
-				}
-				// Validate/activate the Qortex key against the portal before saving,
-				// so a bad key fails HERE with a friendly message. Fail open on
-				// network problems — validation is best-effort.
-				const verdict = await validateQortexKey(key);
-				if (verdict !== "ok") {
-					panel.webview.postMessage({
-						type: "keyStatus",
-						ok: false,
-						message:
-							verdict === "expired"
-								? "This subscription has expired. Renew your plan at the Qortex portal to get a new key."
-								: "That Qortex key isn't valid. Check the key from the Qortex portal and try again.",
-					});
-					return;
-				}
-				const rememberChoice = msg.remember !== false;
-				await context.globalState.update(REMEMBER_FLAG, rememberChoice);
-				const current = webview.controller.stateManager.getApiConfiguration();
-				webview.controller.stateManager.setApiConfiguration({
-					...current,
-					apiKey: key,
-				});
-				await webview.controller.postStateToWebview();
-				completed = true; // valid key — allow the modal to close normally
-				panel.dispose();
-				await vscode.commands
-					.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
-					.then(undefined, () => {});
-				vscode.window.showInformationMessage(
-					rememberChoice
-						? "FenneQ is ready — your Qortex key is saved on this device."
-						: "FenneQ is ready for this session — you'll be asked for your key next time.",
-				);
-			});
+			openKeyModal(notice);
 		} catch (err) {
 			Logger.error(`[BYOK] launch key modal failed: ${err}`);
 		}
@@ -525,6 +705,23 @@ export async function activate(context: vscode.ExtensionContext) {
 	const handleUri = async (uri: vscode.Uri) => {
 		const url = decodeURIComponent(uri.toString());
 		const uriPath = getUriPath(url);
+
+		// Deep-link activation from the Qortex portal:
+		// qortex://saoudrizwan.claude-dev/activate?token=qtx-… — handled here
+		// directly (NOT via SharedUriHandler, which requires a visible sidebar).
+		if (uriPath === "/activate") {
+			const token = new URL(url).searchParams.get("token")?.trim();
+			if (token) {
+				if (applyQortexActivation) {
+					await applyQortexActivation(token);
+				} else {
+					// The launch gate hasn't finished setting up yet — buffer it.
+					pendingActivationToken = token;
+				}
+			}
+			return;
+		}
+
 		const isTaskUri = uriPath === TASK_URI_PATH || uriPath === LG_TASK_URI_PATH;
 
 		if (isTaskUri) {
