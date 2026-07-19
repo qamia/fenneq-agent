@@ -476,13 +476,22 @@ export async function activate(context: vscode.ExtensionContext) {
 			);
 			panel.webview.html = buildQortexKeyModalHtml(nonce, notice);
 			// Take over the window: the gate is a screen, not a tab among tabs.
-			for (const cmd of [
-				"workbench.action.closeSidebar",
-				"workbench.action.closeAuxiliaryBar",
-				"workbench.action.closeOtherEditors",
-			]) {
-				void vscode.commands.executeCommand(cmd).then(undefined, () => {});
-			}
+			// closeOtherEditors only when OUR panel is the active editor —
+			// otherwise a focus race could close the modal itself.
+			const takeOverWindow = () => {
+				for (const cmd of [
+					"workbench.action.closeSidebar",
+					"workbench.action.closeAuxiliaryBar",
+				]) {
+					void vscode.commands.executeCommand(cmd).then(undefined, () => {});
+				}
+				if (panel.active) {
+					void vscode.commands
+						.executeCommand("workbench.action.closeOtherEditors")
+						.then(undefined, () => {});
+				}
+			};
+			takeOverWindow();
 			let completed = false;
 			qortexKeyModal = {
 				panel,
@@ -539,6 +548,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				if (!panel.active) {
 					panel.reveal(vscode.ViewColumn.Active);
 				} else {
+					takeOverWindow();
 					void tryClipboardPrefill();
 				}
 			});
