@@ -346,6 +346,10 @@ export function startQortexKeyGate(context: vscode.ExtensionContext): void {
 			hash: hashKey(key),
 			plan: info.plan,
 			endsAt: info.endsAt,
+			// Daily check-in: the saved key expires 24h after the user provided
+			// it (savedAt is only ever written here — background validation
+			// refreshes preserve it).
+			savedAt: new Date().toISOString(),
 		});
 		await coreReady;
 		const stateManager = coreWebview!.controller.stateManager;
@@ -546,13 +550,29 @@ export function startQortexKeyGate(context: vscode.ExtensionContext): void {
 				notice =
 					"Enter your key to start this session — you chose not to stay signed in on this device.";
 			} else if (savedKey) {
-				// Cache fast-path: a subscription known-good for >24h means zero
-				// network before the editor — refresh the cache in the background.
 				const cache = context.globalState.get<{
 					hash: string;
 					plan?: string;
 					endsAt?: string;
+					savedAt?: string;
 				}>(KEY_CACHE_FLAG);
+
+				// Daily check-in: a saved key is good for 24 hours from the
+				// moment the user provided it, then it must be entered again.
+				const savedMs = cache?.savedAt ? Date.parse(cache.savedAt) : Number.NaN;
+				const checkInDue =
+					!Number.isFinite(savedMs) ||
+					Date.now() - savedMs > 24 * 60 * 60 * 1000;
+				if (checkInDue) {
+					void clearSavedKey();
+					openKeyModal(
+						"Daily check-in: Qortex asks for your key once every 24 hours. Enter it below, or grab it again from the portal.",
+					);
+					return;
+				}
+
+				// Cache fast-path: a subscription known-good for >24h means zero
+				// network before the editor — refresh the cache in the background.
 				const endsMs = cache?.endsAt ? Date.parse(cache.endsAt) : Number.NaN;
 				if (
 					cache?.hash === hashKey(savedKey) &&
@@ -563,7 +583,12 @@ export function startQortexKeyGate(context: vscode.ExtensionContext): void {
 						void context.globalState.update(
 							KEY_CACHE_FLAG,
 							r.verdict === "ok"
-								? { hash: hashKey(savedKey), plan: r.plan, endsAt: r.endsAt }
+								? {
+										hash: hashKey(savedKey),
+										plan: r.plan,
+										endsAt: r.endsAt,
+										savedAt: cache?.savedAt, // refresh ≠ re-entry
+									}
 								: undefined, // revoked mid-cycle → next launch re-checks
 						);
 					});
@@ -575,6 +600,7 @@ export function startQortexKeyGate(context: vscode.ExtensionContext): void {
 						hash: hashKey(savedKey),
 						plan: result.plan,
 						endsAt: result.endsAt,
+						savedAt: cache?.savedAt, // refresh ≠ re-entry
 					});
 					return;
 				}
