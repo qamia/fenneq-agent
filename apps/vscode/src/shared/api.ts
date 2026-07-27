@@ -183,7 +183,7 @@ export const hicapModelInfoSaneDefaults: HicapCompatibleModelInfo = {
 // Anthropic
 // https://docs.anthropic.com/en/docs/about-claude/models // prices updated 2025-01-02
 export type AnthropicModelId = keyof typeof anthropicModels;
-export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-4-6"; // Qortex (QAM-494): FenneQ Borealis tier
+export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-4-6"; // Qortex (QAM-494): FenneQ Altair tier
 export const ANTHROPIC_MIN_THINKING_BUDGET = 1_024;
 export const ANTHROPIC_MAX_THINKING_BUDGET = 6_000;
 export const anthropicModels = {
@@ -483,17 +483,17 @@ export const anthropicModels = {
 // (so renaming a tier never affects routing).
 export const FENNEQ_TIERS = [
 	{
-		tier: "Zenith",
+		tier: "Suhail",
 		modelId: "claude-opus-4-8",
 		blurb: "Frontier — deepest reasoning, hardest problems",
 	},
 	{
-		tier: "Borealis",
+		tier: "Altair",
 		modelId: "claude-sonnet-4-6",
 		blurb: "Balanced — the everyday default",
 	},
 	{
-		tier: "Solstice",
+		tier: "Mirzam",
 		modelId: "claude-haiku-4-5-20251001",
 		blurb: "Fast — quick, low-cost answers",
 	},
@@ -567,7 +567,7 @@ const FENNEQ_PROVIDER_LABEL: Record<FenneqProvider, string> = {
 	local: "Local",
 };
 
-// Display labels keyed by model id for the picker. Live: "Zenith (claude-opus-4-8)";
+// Display labels keyed by model id for the picker. Live: "Suhail (claude-opus-4-8)";
 // planned: "Vesper · ChatGPT (soon)".
 export const FENNEQ_TIER_LABELS: Record<string, string> = {
 	...Object.fromEntries(
@@ -4819,6 +4819,17 @@ export const sapAiCoreModels = {
 // Moonshot AI Studio
 // https://platform.moonshot.ai/docs/pricing/chat
 export const moonshotModels = {
+	// Flagship (2026-07-16): 2.8T MoE, native vision, always-on reasoning.
+	"kimi-k3": {
+		maxTokens: 32_000,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		cacheReadsPrice: 0.3,
+		temperature: 1.0,
+	},
 	"kimi-k2.6": {
 		maxTokens: 32_000,
 		contextWindow: 262_144,
@@ -4886,8 +4897,7 @@ export const moonshotModels = {
 	},
 } as const satisfies Record<string, OpenAiCompatibleModelInfo>;
 export type MoonshotModelId = keyof typeof moonshotModels;
-export const moonshotDefaultModelId =
-	"kimi-k2-0905-preview" satisfies MoonshotModelId;
+export const moonshotDefaultModelId = "kimi-k3" satisfies MoonshotModelId;
 
 // Huawei Cloud MaaS
 // Dify.ai - No model selection needed, models are configured in Dify workflows
