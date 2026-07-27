@@ -53,7 +53,7 @@ export interface ApiHandlerOptions extends Partial<ApiHandlerSettings> {
 		attempt: number,
 		maxRetries: number,
 		delay: number,
-		error: any,
+		error: unknown,
 	) => void; // Callback function
 }
 
@@ -510,38 +510,38 @@ export type FenneqProvider = "anthropic" | "openai" | "gemini" | "local";
 export const FENNEQ_PLANNED_TIERS = [
 	// ChatGPT (OpenAI)
 	{
-		tier: "Vesper",
+		tier: "Simoom",
 		provider: "openai",
 		modelId: "gpt-5",
 		blurb: "ChatGPT — flagship (coming soon)",
 	},
 	{
-		tier: "Selene",
+		tier: "Khamsin",
 		provider: "openai",
 		modelId: "gpt-5-mini",
 		blurb: "ChatGPT — balanced (coming soon)",
 	},
 	{
-		tier: "Helios",
+		tier: "Shamal",
 		provider: "openai",
 		modelId: "gpt-4o-mini",
 		blurb: "ChatGPT — fast (coming soon)",
 	},
 	// Gemini (Google)
 	{
-		tier: "Polaris",
+		tier: "Badr",
 		provider: "gemini",
 		modelId: "gemini-2.5-pro",
 		blurb: "Gemini — flagship (coming soon)",
 	},
 	{
-		tier: "Equinox",
+		tier: "Noor",
 		provider: "gemini",
 		modelId: "gemini-2.5-flash",
 		blurb: "Gemini — balanced (coming soon)",
 	},
 	{
-		tier: "Meridian",
+		tier: "Barq",
 		provider: "gemini",
 		modelId: "gemini-2.5-flash-lite",
 		blurb: "Gemini — fast (coming soon)",
@@ -568,7 +568,7 @@ const FENNEQ_PROVIDER_LABEL: Record<FenneqProvider, string> = {
 };
 
 // Display labels keyed by model id for the picker. Live: "Suhail (claude-opus-4-8)";
-// planned: "Vesper · ChatGPT (soon)".
+// planned: "Simoom · ChatGPT (soon)".
 export const FENNEQ_TIER_LABELS: Record<string, string> = {
 	...Object.fromEntries(
 		FENNEQ_TIERS.map((t) => [t.modelId, `${t.tier} (${t.modelId})`]),
@@ -4897,6 +4897,20 @@ export const moonshotModels = {
 	},
 } as const satisfies Record<string, OpenAiCompatibleModelInfo>;
 export type MoonshotModelId = keyof typeof moonshotModels;
+
+// Qortex: curated Moonshot lineup + eastern display names (legendary birds, the
+// companion family to the FenneQ star tiers Suhail/Altair/Mirzam). Display-only —
+// the raw model id is what goes on the wire.
+export const FENNEQ_MOONSHOT_MODEL_IDS = [
+	"kimi-k3",
+	"kimi-k2.6",
+	"kimi-k2.5",
+] as const satisfies ReadonlyArray<MoonshotModelId>;
+export const FENNEQ_MOONSHOT_LABELS: Record<string, string> = {
+	"kimi-k3": "Rukh (kimi-k3)",
+	"kimi-k2.6": "Huma (kimi-k2.6)",
+	"kimi-k2.5": "Anqa (kimi-k2.5)",
+};
 export const moonshotDefaultModelId = "kimi-k3" satisfies MoonshotModelId;
 
 // Huawei Cloud MaaS
