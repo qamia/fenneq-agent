@@ -62,8 +62,11 @@ export class AnthropicHandler implements ApiHandler {
 			// org Anthropic key — customer devices never see it. A directly-supplied
 			// Anthropic key (advanced/BYOK via settings) still talks to Anthropic.
 			const isQortexKey = apiKey.startsWith("qtx-");
+			// Default: the hosted proxy (Fly, fra). QORTEX_AI_PROXY_URL overrides
+			// for development (e.g. http://localhost:8080 against a local uvicorn).
 			const qortexProxyUrl =
-				process.env.QORTEX_AI_PROXY_URL?.trim() || "http://localhost:8080";
+				process.env.QORTEX_AI_PROXY_URL?.trim() ||
+				"https://qortex-ai-proxy.fly.dev";
 			const baseURL =
 				this.options.anthropicBaseUrl ||
 				(isQortexKey ? qortexProxyUrl : undefined);
