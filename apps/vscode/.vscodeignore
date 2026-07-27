@@ -84,3 +84,13 @@ test-results/
 *storybook.log
 storybook-static
 **/StorybookDecorator.tsx
+
+# Qortex: never ship packaging artifacts or source-tree leakage inside dist/.
+# A stale fenneq-*.vsix (9.9 MB) rode along in every install until 2026-07.
+dist/**/*.vsix
+**/*.vsix
+bun.lock
+webview-ui/bun.lock
+webview-ui/tsconfig*.json
+webview-ui/tailwind.config.mjs
+webview-ui/components.json

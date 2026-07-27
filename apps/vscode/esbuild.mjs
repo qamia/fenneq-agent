@@ -211,7 +211,9 @@ const baseConfig = {
 	define: buildEnvVars,
 	tsconfig: path.resolve(__dirname, "tsconfig.json"),
 	plugins: [
-		copyWasmFiles,
+		// Qortex: copyWasmFiles ships 15 tree-sitter grammars (~26 MB) used only by
+		// list_code_definition_names, which is gated off for this product. Re-add it
+		// here if that tool is ever enabled again.
 		aliasResolverPlugin,
 		/* add to the end of plugins array */
 		esbuildProblemMatcherPlugin,
