@@ -6,7 +6,7 @@
 
 export function getHookTemplate(hookName: string): string {
 	if (process.platform === "win32") {
-		return getWindowsPowerShellTemplate(hookName)
+		return getWindowsPowerShellTemplate(hookName);
 	}
 
 	const templates: Record<string, string> = {
@@ -19,9 +19,9 @@ export function getHookTemplate(hookName: string): string {
 		UserPromptSubmit: getUserPromptSubmitTemplate(),
 		Notification: getNotificationTemplate(),
 		PreCompact: getPreCompactTemplate(),
-	}
+	};
 
-	return templates[hookName] || getDefaultTemplate(hookName)
+	return templates[hookName] || getDefaultTemplate(hookName);
 }
 
 function getWindowsPowerShellTemplate(hookName: string): string {
@@ -42,7 +42,7 @@ try {
     contextModification = ""
     errorMessage = ""
 } | ConvertTo-Json -Compress
-`
+`;
 }
 
 function getTaskStartTemplate(): string {
@@ -97,7 +97,7 @@ else
   ESCAPED_MOD=$(printf '%s' "$CONTEXT_MOD" | sed 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g')
   echo '{"cancel":false,"contextModification":"'"$ESCAPED_MOD"'","errorMessage":""}'
 fi
-`
+`;
 }
 
 function getTaskResumeTemplate(): string {
@@ -138,7 +138,7 @@ echo "[TaskResume] Resuming task: $TASK_ID (previous messages: $MSG_COUNT)" >&2
 
 # Return result
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getTaskCancelTemplate(): string {
@@ -178,7 +178,7 @@ echo "[TaskCancel] Task cancelled: $TASK_ID (status: $STATUS)" >&2
 
 # Return result
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getTaskCompleteTemplate(): string {
@@ -219,7 +219,7 @@ echo "[TaskComplete] Task completed: $TASK_ID (result: $RESULT)" >&2
 
 # Return result
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getPreToolUseTemplate(): string {
@@ -261,7 +261,7 @@ echo "[PreToolUse] Tool about to execute: $TOOL" >&2
 
 # Allow execution
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getPostToolUseTemplate(): string {
@@ -311,7 +311,7 @@ echo "[PostToolUse] Tool completed: $TOOL ($STATUS) in \${DURATION}ms" >&2
 
 # Return result
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getUserPromptSubmitTemplate(): string {
@@ -319,7 +319,7 @@ function getUserPromptSubmitTemplate(): string {
 #
 # UserPromptSubmit Hook
 # 
-# Executes when the user submits a prompt to Cline.
+# Executes when the user submits a prompt to FenneQ.
 # 
 # Input: { taskId, userPromptSubmit: { prompt: string, attachments: string[] }, clineVersion, timestamp, ... }
 # Output: { cancel: boolean, contextModification?: string, errorMessage?: string }
@@ -345,7 +345,7 @@ echo "[UserPromptSubmit] User submitted prompt (length: $PROMPT_LENGTH)" >&2
 
 # Return result
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getNotificationTemplate(): string {
@@ -353,7 +353,7 @@ function getNotificationTemplate(): string {
 #
 # Notification Hook
 #
-# Executes when Cline reaches a user-attention boundary or emits lifecycle notifications.
+# Executes when FenneQ reaches a user-attention boundary or emits lifecycle notifications.
 #
 # Input: {
 #   taskId,
@@ -408,7 +408,7 @@ fi
 echo "[Notification] event=$EVENT source=$SOURCE sourceType=$SOURCE_TYPE waitingForUserInput=$WAITING requiresUserAction=$REQUIRES_ACTION severity=$SEVERITY eventVersion=$EVENT_VERSION" >&2
 
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getPreCompactTemplate(): string {
@@ -464,7 +464,7 @@ echo "[PreCompact] About to compact conversation (contextSize: $CONTEXT_SIZE, st
 
 # Return result
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
 
 function getDefaultTemplate(hookName: string): string {
@@ -490,5 +490,5 @@ echo "[${hookName}] Executed for task $TASK_ID" >&2
 
 # Return result
 echo '{"cancel":false,"contextModification":"","errorMessage":""}'
-`
+`;
 }
