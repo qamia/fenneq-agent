@@ -1,21 +1,29 @@
-import { normalizeOpenaiReasoningEffort, type OpenaiReasoningEffort } from "../storage/types"
+import {
+	normalizeOpenaiReasoningEffort,
+	type OpenaiReasoningEffort,
+} from "../storage/types";
 
 export interface ClaudeOpusAdaptiveThinkingSettings {
-	enabled: boolean
-	effort?: OpenaiReasoningEffort
+	enabled: boolean;
+	effort?: OpenaiReasoningEffort;
 }
 
 export function isClaudeOpusAdaptiveThinkingModel(modelId?: string): boolean {
 	if (!modelId) {
-		return false
+		return false;
 	}
 
-	const id = modelId.toLowerCase()
-	const adaptiveVersions = ["4-6", "4.6", "4-7", "4.7", "4-8", "4.8"]
+	const id = modelId.toLowerCase();
+	const adaptiveVersions = ["4-6", "4.6", "4-7", "4.7", "4-8", "4.8"];
 	return (
 		id.includes("claude-fable-5") ||
-		adaptiveVersions.some((version) => id.includes(`claude-opus-${version}`) || id.includes(`claude-${version}-opus`))
-	)
+		id.includes("claude-opus-5") ||
+		adaptiveVersions.some(
+			(version) =>
+				id.includes(`claude-opus-${version}`) ||
+				id.includes(`claude-${version}-opus`),
+		)
+	);
 }
 
 export function resolveClaudeOpusAdaptiveThinking(
@@ -23,19 +31,21 @@ export function resolveClaudeOpusAdaptiveThinking(
 	legacyThinkingBudgetTokens?: number,
 ): ClaudeOpusAdaptiveThinkingSettings {
 	if (reasoningEffort) {
-		const effort = normalizeOpenaiReasoningEffort(reasoningEffort)
-		return effort === "none" ? { enabled: false } : { enabled: true, effort }
+		const effort = normalizeOpenaiReasoningEffort(reasoningEffort);
+		return effort === "none" ? { enabled: false } : { enabled: true, effort };
 	}
 
-	return legacyThinkingBudgetTokens && legacyThinkingBudgetTokens > 0 ? { enabled: true, effort: "high" } : { enabled: false }
+	return legacyThinkingBudgetTokens && legacyThinkingBudgetTokens > 0
+		? { enabled: true, effort: "high" }
+		: { enabled: false };
 }
 
 export function supportsReasoningEffortForModel(modelId?: string): boolean {
 	if (!modelId) {
-		return false
+		return false;
 	}
 
-	const id = modelId.toLowerCase()
+	const id = modelId.toLowerCase();
 	return (
 		id.includes("gemini") ||
 		id.includes("gpt") ||
@@ -43,5 +53,5 @@ export function supportsReasoningEffortForModel(modelId?: string): boolean {
 		id.includes("/o") ||
 		id.startsWith("o") ||
 		id.includes("grok")
-	)
+	);
 }

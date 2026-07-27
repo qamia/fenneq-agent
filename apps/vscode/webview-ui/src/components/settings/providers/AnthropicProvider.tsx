@@ -87,13 +87,23 @@ export const AnthropicProvider = ({
 						label="FenneQ tier"
 						labels={FENNEQ_TIER_LABELS}
 						models={fenneqTierModels}
-						onChange={(e) =>
+						onChange={(e) => {
+							// Rukh (Kimi K3) lives on the Moonshot provider — picking it
+							// from the tier list switches the provider along with the model.
+							if (e.target.value === "kimi-k3") {
+								handleModeFieldChange(
+									{ plan: "planModeApiProvider", act: "actModeApiProvider" },
+									// biome-ignore lint/suspicious/noExplicitAny: provider union comes from upstream signature
+									"moonshot" as any,
+									currentMode,
+								);
+							}
 							handleModeFieldChange(
 								{ plan: "planModeApiModelId", act: "actModeApiModelId" },
 								e.target.value,
 								currentMode,
-							)
-						}
+							);
+						}}
 						selectedModelId={selectedModelId}
 					/>
 
