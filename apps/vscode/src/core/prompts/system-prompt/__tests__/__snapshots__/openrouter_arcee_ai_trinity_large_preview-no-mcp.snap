@@ -140,17 +140,6 @@ Usage:
 <task_progress>Checklist here (optional)</task_progress>
 </list_files>
 
-## list_code_definition_names
-Description: Request to list definition names (classes, functions, methods, etc.) used in source code files at the top level of the specified directory. This tool provides insights into the codebase structure and important constructs, encapsulating high-level concepts and relationships that are crucial for understanding the overall architecture.
-Parameters:
-- path: (required) The path of a directory (not a file) relative to the current working directory /test/project. Lists definitions across all source files in that directory. To inspect a single file, use read_file instead.
-- task_progress: (optional) A checklist showing task progress after this tool use is completed. The task_progress parameter must be included as a separate parameter inside of the parent tool call, it must be separate from other parameters such as content, arguments, etc. (See 'UPDATING TASK PROGRESS' section for more details)
-Usage:
-<list_code_definition_names>
-<path>Directory path here</path>
-<task_progress>Checklist here (optional)</task_progress>
-</list_code_definition_names>
-
 ## browser_action
 Description: Request to interact with a Puppeteer-controlled browser. Every action, except `close`, will be responded to with a screenshot of the browser's current state, along with any new console logs. You may only perform one browser action per message, and wait for the user's response including a screenshot and logs to determine the next action.
 - The sequence of actions **must always start with** launching the browser at a URL, and **must always end with** closing the browser. If you need to visit a new URL that is not possible to navigate to from the current webpage, you must first close the browser, then launch again at the new URL.
