@@ -1,12 +1,20 @@
-import { ModelFamily } from "@/shared/prompts"
-import { ClineDefaultTool } from "@/shared/tools"
-import type { ClineToolSpec } from "../spec"
-import { TASK_PROGRESS_PARAMETER } from "../types"
+import { ModelFamily } from "@/shared/prompts";
+import { ClineDefaultTool } from "@/shared/tools";
+import type { ClineToolSpec } from "../spec";
+import { TASK_PROGRESS_PARAMETER } from "../types";
 
-const id = ClineDefaultTool.LIST_CODE_DEF
+const id = ClineDefaultTool.LIST_CODE_DEF;
+
+// Qortex: this is a source-code navigation tool (tree-sitter parsing of classes
+// and functions). FenneQ does optimization consulting, not codebase archaeology,
+// so the tool is withheld from the prompt — which also drops 15 tree-sitter
+// grammars (~26 MB) from what the product needs to ship. Flip this to `true` to
+// restore it (and re-add the WASM copy step in esbuild.mjs).
+const CODE_NAVIGATION_ENABLED = false;
 
 const generic: ClineToolSpec = {
 	variant: ModelFamily.GENERIC,
+	contextRequirements: () => CODE_NAVIGATION_ENABLED,
 	id,
 	name: "list_code_definition_names",
 	description:
@@ -20,10 +28,11 @@ const generic: ClineToolSpec = {
 		},
 		TASK_PROGRESS_PARAMETER,
 	],
-}
+};
 
 const NATIVE_GPT_5: ClineToolSpec = {
 	variant: ModelFamily.NATIVE_GPT_5,
+	contextRequirements: () => CODE_NAVIGATION_ENABLED,
 	id,
 	name: "list_code_definition_names",
 	description:
@@ -36,11 +45,15 @@ const NATIVE_GPT_5: ClineToolSpec = {
 		},
 		TASK_PROGRESS_PARAMETER,
 	],
-}
+};
 
 const NATIVE_NEXT_GEN: ClineToolSpec = {
 	...NATIVE_GPT_5,
 	variant: ModelFamily.NATIVE_NEXT_GEN,
-}
+};
 
-export const list_code_definition_names_variants = [generic, NATIVE_GPT_5, NATIVE_NEXT_GEN]
+export const list_code_definition_names_variants = [
+	generic,
+	NATIVE_GPT_5,
+	NATIVE_NEXT_GEN,
+];

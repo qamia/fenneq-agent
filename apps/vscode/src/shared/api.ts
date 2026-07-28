@@ -53,7 +53,7 @@ export interface ApiHandlerOptions extends Partial<ApiHandlerSettings> {
 		attempt: number,
 		maxRetries: number,
 		delay: number,
-		error: any,
+		error: unknown,
 	) => void; // Callback function
 }
 
@@ -339,6 +339,17 @@ export const anthropicModels = {
 		cacheReadsPrice: 0.5,
 		tiers: CLAUDE_OPUS_1M_TIERS,
 	},
+	"claude-opus-5": {
+		maxTokens: 128_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoning: true,
+		inputPrice: 5,
+		outputPrice: 25,
+		cacheWritesPrice: 6.25,
+		cacheReadsPrice: 0.5,
+	},
 	"claude-fable-5": {
 		maxTokens: 128_000,
 		contextWindow: 200_000,
@@ -483,6 +494,16 @@ export const anthropicModels = {
 // (so renaming a tier never affects routing).
 export const FENNEQ_TIERS = [
 	{
+		tier: "Aldebaran",
+		modelId: "claude-fable-5",
+		blurb: "Apex — Claude Fable 5, the most capable model",
+	},
+	{
+		tier: "Deneb",
+		modelId: "claude-opus-5",
+		blurb: "Frontier — Claude Opus 5, deep reasoning at scale",
+	},
+	{
 		tier: "Suhail",
 		modelId: "claude-opus-4-8",
 		blurb: "Frontier — deepest reasoning, hardest problems",
@@ -510,45 +531,45 @@ export type FenneqProvider = "anthropic" | "openai" | "gemini" | "local";
 export const FENNEQ_PLANNED_TIERS = [
 	// ChatGPT (OpenAI)
 	{
-		tier: "Vesper",
+		tier: "Simoom",
 		provider: "openai",
 		modelId: "gpt-5",
 		blurb: "ChatGPT — flagship (coming soon)",
 	},
 	{
-		tier: "Selene",
+		tier: "Khamsin",
 		provider: "openai",
 		modelId: "gpt-5-mini",
 		blurb: "ChatGPT — balanced (coming soon)",
 	},
 	{
-		tier: "Helios",
+		tier: "Shamal",
 		provider: "openai",
 		modelId: "gpt-4o-mini",
 		blurb: "ChatGPT — fast (coming soon)",
 	},
 	// Gemini (Google)
 	{
-		tier: "Polaris",
+		tier: "Badr",
 		provider: "gemini",
 		modelId: "gemini-2.5-pro",
 		blurb: "Gemini — flagship (coming soon)",
 	},
 	{
-		tier: "Equinox",
+		tier: "Noor",
 		provider: "gemini",
 		modelId: "gemini-2.5-flash",
 		blurb: "Gemini — balanced (coming soon)",
 	},
 	{
-		tier: "Meridian",
+		tier: "Barq",
 		provider: "gemini",
 		modelId: "gemini-2.5-flash-lite",
 		blurb: "Gemini — fast (coming soon)",
 	},
 	// Local
 	{
-		tier: "Lumina",
+		tier: "Sidra",
 		provider: "local",
 		modelId: "local-llm",
 		blurb: "Local LLM — runs on your machine (coming soon)",
@@ -568,11 +589,12 @@ const FENNEQ_PROVIDER_LABEL: Record<FenneqProvider, string> = {
 };
 
 // Display labels keyed by model id for the picker. Live: "Suhail (claude-opus-4-8)";
-// planned: "Vesper · ChatGPT (soon)".
+// planned: "Simoom · ChatGPT (soon)".
 export const FENNEQ_TIER_LABELS: Record<string, string> = {
 	...Object.fromEntries(
 		FENNEQ_TIERS.map((t) => [t.modelId, `${t.tier} (${t.modelId})`]),
 	),
+	"kimi-k3": "Rukh · Kimi K3 (kimi-k3)",
 	...Object.fromEntries(
 		FENNEQ_PLANNED_TIERS.map((t) => [
 			t.modelId,
@@ -581,10 +603,26 @@ export const FENNEQ_TIER_LABELS: Record<string, string> = {
 	),
 };
 
-// The curated model catalog the FenneQ picker can SELECT (live Claude tiers only).
-export const fenneqTierModels: Record<string, ModelInfo> = Object.fromEntries(
-	FENNEQ_TIERS.map((t) => [t.modelId, anthropicModels[t.modelId]]),
-);
+// The curated model catalog the FenneQ picker can SELECT: the live Claude tiers
+// plus Rukh (Kimi K3) — choosing Rukh switches the provider to Moonshot (see
+// AnthropicProvider.tsx).
+export const fenneqTierModels: Record<string, ModelInfo> = {
+	...Object.fromEntries(
+		FENNEQ_TIERS.map((t) => [t.modelId, anthropicModels[t.modelId]]),
+	),
+	// Inline literal: moonshotModels is declared later in this file, so
+	// referencing it here would hit the temporal dead zone at module load.
+	// Keep in sync with moonshotModels["kimi-k3"].
+	"kimi-k3": {
+		maxTokens: 32_000,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		cacheReadsPrice: 0.3,
+	},
+};
 
 // Disabled placeholder options rendered (greyed out) below the live tiers in the picker.
 export const FENNEQ_PLANNED_OPTIONS: ReadonlyArray<{
@@ -4897,6 +4935,20 @@ export const moonshotModels = {
 	},
 } as const satisfies Record<string, OpenAiCompatibleModelInfo>;
 export type MoonshotModelId = keyof typeof moonshotModels;
+
+// Qortex: curated Moonshot lineup + eastern display names (legendary birds, the
+// companion family to the FenneQ star tiers Suhail/Altair/Mirzam). Display-only —
+// the raw model id is what goes on the wire.
+export const FENNEQ_MOONSHOT_MODEL_IDS = [
+	"kimi-k3",
+	"kimi-k2.6",
+	"kimi-k2.5",
+] as const satisfies ReadonlyArray<MoonshotModelId>;
+export const FENNEQ_MOONSHOT_LABELS: Record<string, string> = {
+	"kimi-k3": "Rukh (kimi-k3)",
+	"kimi-k2.6": "Huma (kimi-k2.6)",
+	"kimi-k2.5": "Anqa (kimi-k2.5)",
+};
 export const moonshotDefaultModelId = "kimi-k3" satisfies MoonshotModelId;
 
 // Huawei Cloud MaaS

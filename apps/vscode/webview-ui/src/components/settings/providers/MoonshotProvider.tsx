@@ -1,42 +1,65 @@
-import { moonshotModels } from "@shared/api"
-import { UpdateApiConfigurationRequestNew } from "@shared/proto/index.cline"
-import { Mode } from "@shared/storage/types"
-import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
-import { useExtensionState } from "@/context/ExtensionStateContext"
-import { ModelsServiceClient } from "@/services/grpc-client"
-import { ApiKeyField } from "../common/ApiKeyField"
-import { ModelInfoView } from "../common/ModelInfoView"
-import { DropdownContainer, ModelSelector } from "../common/ModelSelector"
-import { normalizeApiConfiguration } from "../utils/providerUtils"
+import {
+	FENNEQ_MOONSHOT_LABELS,
+	FENNEQ_MOONSHOT_MODEL_IDS,
+	moonshotModels,
+} from "@shared/api";
+
+// Qortex: show the curated, eastern-named lineup (Rukh/Huma/Anqa).
+const fenneqMoonshotModels = Object.fromEntries(
+	FENNEQ_MOONSHOT_MODEL_IDS.map((id) => [id, moonshotModels[id]]),
+);
+
+import { UpdateApiConfigurationRequestNew } from "@shared/proto/index.cline";
+import type { Mode } from "@shared/storage/types";
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
+import { useExtensionState } from "@/context/ExtensionStateContext";
+import { ModelsServiceClient } from "@/services/grpc-client";
+import { ApiKeyField } from "../common/ApiKeyField";
+import { ModelInfoView } from "../common/ModelInfoView";
+import { DropdownContainer, ModelSelector } from "../common/ModelSelector";
+import { normalizeApiConfiguration } from "../utils/providerUtils";
 
 /**
  * Props for the MoonshotProvider component
  */
 interface MoonshotProviderProps {
-	showModelOptions: boolean
-	isPopup?: boolean
-	currentMode: Mode
+	showModelOptions: boolean;
+	isPopup?: boolean;
+	currentMode: Mode;
 }
 
 /**
  * The Moonshot AI Studio provider configuration component
  */
-export const MoonshotProvider = ({ showModelOptions, isPopup, currentMode }: MoonshotProviderProps) => {
-	const { apiConfiguration } = useExtensionState()
+export const MoonshotProvider = ({
+	showModelOptions,
+	isPopup,
+	currentMode,
+}: MoonshotProviderProps) => {
+	const { apiConfiguration } = useExtensionState();
 
 	// Get the normalized configuration
-	const { selectedModelId, selectedModelInfo } = normalizeApiConfiguration(apiConfiguration, currentMode)
+	const { selectedModelId, selectedModelInfo } = normalizeApiConfiguration(
+		apiConfiguration,
+		currentMode,
+	);
 
 	return (
 		<div>
-			<DropdownContainer className="dropdown-container" style={{ position: "inherit" }}>
+			<DropdownContainer
+				className="dropdown-container"
+				style={{ position: "inherit" }}
+			>
 				<label htmlFor="moonshot-entrypoint">
-					<span style={{ fontWeight: 500, marginTop: 5 }}>Moonshot Entrypoint</span>
+					<span style={{ fontWeight: 500, marginTop: 5 }}>
+						Moonshot Entrypoint
+					</span>
 				</label>
 				<VSCodeDropdown
 					id="moonshot-entrypoint"
 					onChange={async (e) => {
-						const value = (e.target as any).value
+						// biome-ignore lint/suspicious/noExplicitAny: upstream Cline event typing
+						const value = (e.target as any).value;
 						await ModelsServiceClient.updateApiConfiguration(
 							UpdateApiConfigurationRequestNew.create({
 								updates: {
@@ -46,13 +69,14 @@ export const MoonshotProvider = ({ showModelOptions, isPopup, currentMode }: Moo
 								},
 								updateMask: ["options.moonshotApiLine"],
 							}),
-						)
+						);
 					}}
 					style={{
 						minWidth: 130,
 						position: "relative",
 					}}
-					value={apiConfiguration?.moonshotApiLine || "international"}>
+					value={apiConfiguration?.moonshotApiLine || "international"}
+				>
 					<VSCodeOption value="international">api.moonshot.ai</VSCodeOption>
 					<VSCodeOption value="china">api.moonshot.cn</VSCodeOption>
 				</VSCodeDropdown>
@@ -70,7 +94,7 @@ export const MoonshotProvider = ({ showModelOptions, isPopup, currentMode }: Moo
 							},
 							updateMask: ["secrets.moonshotApiKey"],
 						}),
-					)
+					);
 				}}
 				providerName="Moonshot"
 				signupUrl={
@@ -84,9 +108,11 @@ export const MoonshotProvider = ({ showModelOptions, isPopup, currentMode }: Moo
 				<>
 					<ModelSelector
 						label="Model"
-						models={moonshotModels}
+						models={fenneqMoonshotModels}
+						labels={FENNEQ_MOONSHOT_LABELS}
+						// biome-ignore lint/suspicious/noExplicitAny: upstream Cline event typing
 						onChange={async (e: any) => {
-							const value = e.target.value
+							const value = e.target.value;
 
 							await ModelsServiceClient.updateApiConfiguration(
 								UpdateApiConfigurationRequestNew.create(
@@ -100,14 +126,18 @@ export const MoonshotProvider = ({ showModelOptions, isPopup, currentMode }: Moo
 												updateMask: ["options.actModeApiModelId"],
 											},
 								),
-							)
+							);
 						}}
 						selectedModelId={selectedModelId}
 					/>
 
-					<ModelInfoView isPopup={isPopup} modelInfo={selectedModelInfo} selectedModelId={selectedModelId} />
+					<ModelInfoView
+						isPopup={isPopup}
+						modelInfo={selectedModelInfo}
+						selectedModelId={selectedModelId}
+					/>
 				</>
 			)}
 		</div>
-	)
-}
+	);
+};

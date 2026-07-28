@@ -232,7 +232,12 @@ export class AnthropicHandler implements ApiHandler {
 				: await client.messages.create(requestBody);
 		}
 
-		const lastStartedToolCall = { id: "", name: "", arguments: "" };
+		const lastStartedToolCall = {
+			id: "",
+			name: "",
+			arguments: "",
+			emitted: false,
+		};
 
 		for await (const chunk of stream) {
 			switch (chunk?.type) {
@@ -284,6 +289,7 @@ export class AnthropicHandler implements ApiHandler {
 								lastStartedToolCall.id = chunk.content_block.id;
 								lastStartedToolCall.name = chunk.content_block.name;
 								lastStartedToolCall.arguments = "";
+								lastStartedToolCall.emitted = false;
 							}
 							break;
 						case "text":
@@ -334,6 +340,7 @@ export class AnthropicHandler implements ApiHandler {
 								chunk.delta.partial_json
 							) {
 								// 	// Convert Anthropic tool_use to OpenAI-compatible format
+								lastStartedToolCall.emitted = true;
 								yield {
 									type: "tool_calls",
 									tool_call: {
@@ -352,9 +359,33 @@ export class AnthropicHandler implements ApiHandler {
 					break;
 
 				case "content_block_stop":
+					// Zero-argument tool calls stream a single input_json_delta with
+					// partial_json: "" (observed from Claude Opus), which the truthy
+					// guard above skips — the tool call would be silently dropped and
+					// the task loop would report "you did not use a tool". Emit it
+					// here with an empty object instead.
+					if (
+						lastStartedToolCall.id &&
+						lastStartedToolCall.name &&
+						!lastStartedToolCall.emitted
+					) {
+						yield {
+							type: "tool_calls",
+							tool_call: {
+								...lastStartedToolCall,
+								function: {
+									...lastStartedToolCall,
+									id: lastStartedToolCall.id,
+									name: lastStartedToolCall.name,
+									arguments: "{}",
+								},
+							},
+						};
+					}
 					lastStartedToolCall.id = "";
 					lastStartedToolCall.name = "";
 					lastStartedToolCall.arguments = "";
+					lastStartedToolCall.emitted = false;
 					break;
 			}
 		}
