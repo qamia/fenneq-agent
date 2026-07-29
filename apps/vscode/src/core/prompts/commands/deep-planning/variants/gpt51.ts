@@ -1,7 +1,7 @@
-import { isGPT51Model } from "@utils/model-utils"
-import { getShell } from "@utils/shell"
-import type { SystemPromptContext } from "@/core/prompts/system-prompt/types"
-import type { DeepPlanningVariant } from "../types"
+import { isGPT51Model } from "@utils/model-utils";
+import { getShell } from "@utils/shell";
+import type { SystemPromptContext } from "@/core/prompts/system-prompt/types";
+import type { DeepPlanningVariant } from "../types";
 
 /**
  * Creates the OpenAI GPT-5.1 variant for deep-planning prompt
@@ -13,14 +13,14 @@ export function createGPT51Variant(): DeepPlanningVariant {
 		family: "gpt-5",
 		version: 1,
 		matcher: (context: SystemPromptContext) => {
-			const modelId = context.providerInfo?.model?.id
+			const modelId = context.providerInfo?.model?.id;
 			if (!modelId) {
-				return false
+				return false;
 			}
-			return isGPT51Model(modelId)
+			return isGPT51Model(modelId);
 		},
 		template: "", // Template is dynamically generated in getDeepPlanningPrompt() based on focus chain settings
-	}
+	};
 }
 
 /**
@@ -28,15 +28,19 @@ export function createGPT51Variant(): DeepPlanningVariant {
  * @param focusChainEnabled Whether focus chain (task_progress) is enabled for this task
  * @param enableNativeToolCalls Whether native tool calling is enabled
  */
-export function generateGPT51Template(focusChainEnabled: boolean, enableNativeToolCalls: boolean): string {
-	const detectedShell = getShell()
+export function generateGPT51Template(
+	focusChainEnabled: boolean,
+	enableNativeToolCalls: boolean,
+): string {
+	const detectedShell = getShell();
 
-	let isPowerShell = false
+	let isPowerShell = false;
 	try {
 		isPowerShell =
 			detectedShell != null &&
 			typeof detectedShell === "string" &&
-			(detectedShell.toLowerCase().includes("powershell") || detectedShell.toLowerCase().includes("pwsh"))
+			(detectedShell.toLowerCase().includes("powershell") ||
+				detectedShell.toLowerCase().includes("pwsh"));
 	} catch {}
 
 	return `<explicit_instructions type="deep-planning">
@@ -257,5 +261,5 @@ Your implementation plan should be detailed enough that another developer could 
 
 Below is the user's input from when they indicated that they wanted to create this comprehensive implementation plan.
 </explicit_instructions>
-`
+`;
 }

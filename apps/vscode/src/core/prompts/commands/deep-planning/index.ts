@@ -1,11 +1,11 @@
-import type { ApiProviderInfo } from "@/core/api"
-import type { SystemPromptContext } from "@/core/prompts/system-prompt/types"
-import { getDeepPlanningRegistry } from "./registry"
-import { generateGemini3Template } from "./variants/gemini3"
-import { generateGPT51Template } from "./variants/gpt51"
+import type { ApiProviderInfo } from "@/core/api";
+import type { SystemPromptContext } from "@/core/prompts/system-prompt/types";
+import { getDeepPlanningRegistry } from "./registry";
+import { generateGemini3Template } from "./variants/gemini3";
+import { generateGPT51Template } from "./variants/gpt51";
 
 const focusChainIntro: string = `**Task Progress Parameter:**
-When creating the new task, you must include a task_progress parameter that breaks down the implementation into trackable steps. This parameter should be included inside the tool call, but not located inside of other content/argument blocks. This should follow the standard Markdown checklist format with "- [ ]" for incomplete items.`
+When creating the new task, you must include a task_progress parameter that breaks down the implementation into trackable steps. This parameter should be included inside the tool call, but not located inside of other content/argument blocks. This should follow the standard Markdown checklist format with "- [ ]" for incomplete items.`;
 
 /**
  * Generates the deep-planning slash command response with model-family-aware variant selection
@@ -23,27 +23,38 @@ export function getDeepPlanningPrompt(
 	const context: SystemPromptContext = {
 		providerInfo: providerInfo || ({} as ApiProviderInfo),
 		ide: "vscode",
-	}
+	};
 
 	// Get the appropriate variant from registry
-	const registry = getDeepPlanningRegistry()
-	const variant = registry.get(context)
-	const newTaskInstructions = generateNewTaskInstructions(enableNativeToolCalls ?? false)
-	const focusChainParam = focusChainSettings?.enabled ? focusChainIntro : ""
+	const registry = getDeepPlanningRegistry();
+	const variant = registry.get(context);
+	const newTaskInstructions = generateNewTaskInstructions(
+		enableNativeToolCalls ?? false,
+	);
+	const focusChainParam = focusChainSettings?.enabled ? focusChainIntro : "";
 
 	// For variants with extensive focus chain prompting, generate template with focus chain flag
-	let template: string
+	let template: string;
 	if (variant.id === "gpt-51") {
-		template = generateGPT51Template(focusChainSettings?.enabled ?? false, enableNativeToolCalls ?? false)
+		template = generateGPT51Template(
+			focusChainSettings?.enabled ?? false,
+			enableNativeToolCalls ?? false,
+		);
 	} else if (variant.id === "gemini-3") {
-		template = generateGemini3Template(focusChainSettings?.enabled ?? false, enableNativeToolCalls ?? false)
+		template = generateGemini3Template(
+			focusChainSettings?.enabled ?? false,
+			enableNativeToolCalls ?? false,
+		);
 	} else {
-		template = variant.template
-		template = template.replace("{{FOCUS_CHAIN_PARAM}}", focusChainParam)
-		template = template.replace("{{NEW_TASK_INSTRUCTIONS}}", newTaskInstructions)
+		template = variant.template;
+		template = template.replace("{{FOCUS_CHAIN_PARAM}}", focusChainParam);
+		template = template.replace(
+			"{{NEW_TASK_INSTRUCTIONS}}",
+			newTaskInstructions,
+		);
 	}
 
-	return template
+	return template;
 }
 
 /**
@@ -67,7 +78,7 @@ When you are ready to create the implementation task, you must call the new_task
 }
 \`\`\`
 
-The context parameter should include all five sections as described above.`
+The context parameter should include all five sections as described above.`;
 	} else {
 		return `
 **new_task Tool Definition:**
@@ -80,9 +91,9 @@ When you are ready to create the implementation task, you must call the new_task
 </new_task>
 \`\`\`
 
-The context parameter should include all five sections as described above.`
+The context parameter should include all five sections as described above.`;
 	}
 }
 
 // Export types for external use
-export type { DeepPlanningRegistry, DeepPlanningVariant } from "./types"
+export type { DeepPlanningRegistry, DeepPlanningVariant } from "./types";
