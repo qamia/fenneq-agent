@@ -20,7 +20,7 @@ const HomeHeader = ({ shouldShowQuickWins = false }: HomeHeaderProps) => {
 
 	const headingText = lazyTeammateModeEnabled
 		? "I guess I'm here to help"
-		: "What can I do for you?";
+		: "What are we optimizing today?";
 
 	return (
 		<div className="flex flex-col items-center mb-5">
