@@ -15,6 +15,7 @@ export enum ClineDefaultTool {
 	SEARCH = "search_files",
 	LIST_FILES = "list_files",
 	INSPECT_DATA = "inspect_data",
+	RENDER_PLAN = "render_plan",
 	LIST_CODE_DEF = "list_code_definition_names",
 	BROWSER = "browser_action",
 	MCP_USE = "use_mcp_tool",
