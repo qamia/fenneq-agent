@@ -239,6 +239,36 @@
   {
     "type": "function",
     "function": {
+      "name": "render_plan",
+      "description": "Generate a client-ready, branded HTML report from a solved plan and open it in the browser. You supply the DATA as JSON; the visual template is built in — do not hand-write report HTML. Use this for the final deliverable of an optimization engagement (and after significant re-solves), in addition to the markdown plan document. The report is a single self-contained .html file the user can send to their client.",
+      "strict": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Output path for the .html report (relative to the current working directory /test/project), e.g. allocation_report.html"
+          },
+          "data": {
+            "type": "string",
+            "description": "A JSON object with the report content. Fields (all optional except title):\n{\n \"title\": \"Stand Allocation — Morning Bank\",       (required)\n \"subtitle\": \"Sharjah Intl · tomorrow 06:00–11:00\",\n \"summary\": \"One-paragraph statement of the decision and how good it is.\",\n \"kpis\": [{ \"label\": \"Objective\", \"value\": \"1 flight bussed\", \"note\": \"provably minimal\" }],\n \"changes\": [{ \"item\": \"TK762\", \"before\": \"S4\", \"after\": \"R1\", \"why\": \"...\" }],   (include after re-solves)\n \"timeline\": { \"title\": \"Stand occupancy\", \"items\": [{ \"resource\": \"S5\", \"label\": \"EK203\", \"start\": \"06:40\", \"end\": \"08:50\", \"highlight\": false }] },   (24h HH:mm; highlight=true for bussed/moved/notable)\n \"table\": { \"title\": \"Plan\", \"columns\": [\"Flight\", \"Stand\"], \"rows\": [[\"EK203\", \"S5\"]] },\n \"notes\": [\"Assumption or caveat, one per entry.\"]\n}"
+          },
+          "task_progress": {
+            "type": "string",
+            "description": "A checklist showing task progress after this tool use is completed. The task_progress parameter must be included as a separate parameter inside of the parent tool call, it must be separate from other parameters such as content, arguments, etc. (See 'UPDATING TASK PROGRESS' section for more details)"
+          }
+        },
+        "required": [
+          "path",
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "browser_action",
       "description": "Request to interact with a Puppeteer-controlled browser. Every action, except `close`, will be responded to with a screenshot of the browser's current state, along with any new console logs. You may only perform one browser action per message, and wait for the user's response including a screenshot and logs to determine the next action.\n- The sequence of actions **must always start with** launching the browser at a URL, and **must always end with** closing the browser. If you need to visit a new URL that is not possible to navigate to from the current webpage, you must first close the browser, then launch again at the new URL.\n- While the browser is active, only the `browser_action` tool can be used. No other tools should be called during this time. You may proceed to use other tools only after closing the browser. For example if you run into an error and need to fix a file, you must close the browser, then use other tools to make the necessary changes, then re-launch the browser to verify the result.\n- The browser window has a resolution of **1280x720** pixels. When performing any click actions, ensure the coordinates are within this resolution range.\n- Before clicking on any elements such as icons, links, or buttons, you must consult the provided screenshot of the page to determine the coordinates of the element. The click should be targeted at the **center of the element**, not on its edges.",
       "strict": false,

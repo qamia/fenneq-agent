@@ -63,6 +63,7 @@ export class AutoApprove {
 				case ClineDefaultTool.SEARCH:
 				case ClineDefaultTool.NEW_RULE:
 				case ClineDefaultTool.FILE_NEW:
+				case ClineDefaultTool.RENDER_PLAN:
 				case ClineDefaultTool.FILE_EDIT:
 				case ClineDefaultTool.APPLY_PATCH:
 				case ClineDefaultTool.BASH:
@@ -87,6 +88,7 @@ export class AutoApprove {
 				case ClineDefaultTool.SEARCH:
 				case ClineDefaultTool.NEW_RULE:
 				case ClineDefaultTool.FILE_NEW:
+				case ClineDefaultTool.RENDER_PLAN:
 				case ClineDefaultTool.FILE_EDIT:
 				case ClineDefaultTool.APPLY_PATCH:
 				case ClineDefaultTool.BASH:
@@ -118,6 +120,7 @@ export class AutoApprove {
 				];
 			case ClineDefaultTool.NEW_RULE:
 			case ClineDefaultTool.FILE_NEW:
+			case ClineDefaultTool.RENDER_PLAN:
 			case ClineDefaultTool.FILE_EDIT:
 			case ClineDefaultTool.APPLY_PATCH:
 				return [

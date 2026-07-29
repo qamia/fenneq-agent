@@ -73,6 +73,7 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 		ClineDefaultTool.SEARCH,
 		ClineDefaultTool.LIST_FILES,
 		ClineDefaultTool.INSPECT_DATA,
+		ClineDefaultTool.RENDER_PLAN,
 		ClineDefaultTool.LIST_CODE_DEF,
 		ClineDefaultTool.BROWSER,
 		ClineDefaultTool.WEB_FETCH,

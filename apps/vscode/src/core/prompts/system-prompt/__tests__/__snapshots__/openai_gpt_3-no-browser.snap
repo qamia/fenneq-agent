@@ -142,6 +142,29 @@ Usage:
 <task_progress>Checklist here (optional)</task_progress>
 </inspect_data>
 
+## render_plan
+Description: Generate a client-ready, branded HTML report from a solved plan and open it in the browser. You supply the DATA as JSON; the visual template is built in — do not hand-write report HTML. Use this for the final deliverable of an optimization engagement (and after significant re-solves), in addition to the markdown plan document. The report is a single self-contained .html file the user can send to their client.
+Parameters:
+- path: (required) Output path for the .html report (relative to the current working directory /test/project), e.g. allocation_report.html
+- data: (required) A JSON object with the report content. Fields (all optional except title):
+{
+ "title": "Stand Allocation — Morning Bank",       (required)
+ "subtitle": "Sharjah Intl · tomorrow 06:00–11:00",
+ "summary": "One-paragraph statement of the decision and how good it is.",
+ "kpis": [{ "label": "Objective", "value": "1 flight bussed", "note": "provably minimal" }],
+ "changes": [{ "item": "TK762", "before": "S4", "after": "R1", "why": "..." }],   (include after re-solves)
+ "timeline": { "title": "Stand occupancy", "items": [{ "resource": "S5", "label": "EK203", "start": "06:40", "end": "08:50", "highlight": false }] },   (24h HH:mm; highlight=true for bussed/moved/notable)
+ "table": { "title": "Plan", "columns": ["Flight", "Stand"], "rows": [["EK203", "S5"]] },
+ "notes": ["Assumption or caveat, one per entry."]
+}
+- task_progress: (optional) A checklist showing task progress after this tool use is completed. The task_progress parameter must be included as a separate parameter inside of the parent tool call, it must be separate from other parameters such as content, arguments, etc. (See 'UPDATING TASK PROGRESS' section for more details)
+Usage:
+<render_plan>
+<path>Report file path here</path>
+<data>JSON report content here</data>
+<task_progress>Checklist here (optional)</task_progress>
+</render_plan>
+
 ## use_mcp_tool
 Description: Request to use a tool provided by a connected MCP server. Each MCP server can provide multiple tools with different capabilities. Tools have defined input schemas that specify required and optional parameters.
 Parameters:
