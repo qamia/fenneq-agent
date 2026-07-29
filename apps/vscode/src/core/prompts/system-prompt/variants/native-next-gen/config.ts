@@ -54,16 +54,6 @@ export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
 		SystemPromptSection.USER_INSTRUCTIONS,
 		SystemPromptSection.SKILLS,
 	)
-	.overrideComponent(SystemPromptSection.AGENT_ROLE, {
-		template: FENNEQ_AGENT_ROLE,
-	})
-	.overrideComponent(SystemPromptSection.OBJECTIVE, {
-		template: getFenneqObjective,
-	})
-	.overrideComponent(SystemPromptSection.CAPABILITIES, {
-		template: getFenneqCapabilities,
-	})
-	.overrideComponent(SystemPromptSection.RULES, { template: getFenneqRules })
 	.tools(
 		ClineDefaultTool.ASK,
 		ClineDefaultTool.BASH,
@@ -106,6 +96,18 @@ export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
 	.overrideComponent(SystemPromptSection.FEEDBACK, {
 		template: TEMPLATE_OVERRIDES.FEEDBACK,
 	})
+	// FenneQ optimization-native overrides. The builder is last-write-wins, so
+	// these MUST stay after the stock TEMPLATE_OVERRIDES block above.
+	.overrideComponent(SystemPromptSection.AGENT_ROLE, {
+		template: FENNEQ_AGENT_ROLE,
+	})
+	.overrideComponent(SystemPromptSection.OBJECTIVE, {
+		template: getFenneqObjective,
+	})
+	.overrideComponent(SystemPromptSection.CAPABILITIES, {
+		template: getFenneqCapabilities,
+	})
+	.overrideComponent(SystemPromptSection.RULES, { template: getFenneqRules })
 	.build();
 
 // Compile-time validation

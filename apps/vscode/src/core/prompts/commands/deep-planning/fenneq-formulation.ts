@@ -120,7 +120,7 @@ Checks that every HARD constraint holds in the produced solution, sanity bounds 
 [Implementation Order]
 Single sentence describing the sequence.
 
-Numbered steps: data loader, variables, constraints (hard first), objective, solve, feasibility check, interpretation/report.
+Numbered steps: data loader, variables, constraints (hard first), objective, solve, feasibility check, interpretation/report (report = decision table + mermaid gantt of the plan; on re-solves, a what-changed diff table first).
 
 ## STEP 4: Create Implementation Task
 
