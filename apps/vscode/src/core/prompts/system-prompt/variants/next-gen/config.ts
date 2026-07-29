@@ -65,16 +65,6 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 		SystemPromptSection.USER_INSTRUCTIONS,
 		SystemPromptSection.SKILLS,
 	)
-	.overrideComponent(SystemPromptSection.AGENT_ROLE, {
-		template: FENNEQ_AGENT_ROLE,
-	})
-	.overrideComponent(SystemPromptSection.OBJECTIVE, {
-		template: getFenneqObjective,
-	})
-	.overrideComponent(SystemPromptSection.CAPABILITIES, {
-		template: getFenneqCapabilities,
-	})
-	.overrideComponent(SystemPromptSection.RULES, { template: getFenneqRules })
 	.tools(
 		ClineDefaultTool.BASH,
 		ClineDefaultTool.FILE_READ,
@@ -83,6 +73,7 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 		ClineDefaultTool.SEARCH,
 		ClineDefaultTool.LIST_FILES,
 		ClineDefaultTool.INSPECT_DATA,
+		ClineDefaultTool.RENDER_PLAN,
 		ClineDefaultTool.LIST_CODE_DEF,
 		ClineDefaultTool.BROWSER,
 		ClineDefaultTool.WEB_FETCH,
@@ -106,6 +97,18 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 	.overrideComponent(SystemPromptSection.RULES, {
 		template: rules_template,
 	})
+	// FenneQ optimization-native overrides. The builder is last-write-wins, so
+	// these MUST stay after the stock rules_template override above.
+	.overrideComponent(SystemPromptSection.AGENT_ROLE, {
+		template: FENNEQ_AGENT_ROLE,
+	})
+	.overrideComponent(SystemPromptSection.OBJECTIVE, {
+		template: getFenneqObjective,
+	})
+	.overrideComponent(SystemPromptSection.CAPABILITIES, {
+		template: getFenneqCapabilities,
+	})
+	.overrideComponent(SystemPromptSection.RULES, { template: getFenneqRules })
 	.build();
 
 // Compile-time validation

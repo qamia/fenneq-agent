@@ -18,6 +18,7 @@ import { LoadMcpDocumentationHandler } from "./handlers/LoadMcpDocumentationHand
 import { NewTaskHandler } from "./handlers/NewTaskHandler";
 import { PlanModeRespondHandler } from "./handlers/PlanModeRespondHandler";
 import { ReadFileToolHandler } from "./handlers/ReadFileToolHandler";
+import { RenderPlanToolHandler } from "./handlers/RenderPlanToolHandler";
 import { ReportBugHandler } from "./handlers/ReportBugHandler";
 import { SearchFilesToolHandler } from "./handlers/SearchFilesToolHandler";
 import { UseSubagentsToolHandler } from "./handlers/SubagentToolHandler";
@@ -108,6 +109,8 @@ export class ToolExecutorCoordinator {
 			new ListFilesToolHandler(v),
 		[ClineDefaultTool.INSPECT_DATA]: (v: ToolValidator) =>
 			new InspectDataToolHandler(v),
+		[ClineDefaultTool.RENDER_PLAN]: (v: ToolValidator) =>
+			new RenderPlanToolHandler(v),
 		[ClineDefaultTool.LIST_CODE_DEF]: (v: ToolValidator) =>
 			new ListCodeDefinitionNamesToolHandler(v),
 		[ClineDefaultTool.BROWSER]: (_v: ToolValidator) => new BrowserToolHandler(),

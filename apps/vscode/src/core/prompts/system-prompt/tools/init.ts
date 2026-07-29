@@ -16,6 +16,7 @@ import { load_mcp_documentation_variants } from "./load_mcp_documentation";
 import { new_task_variants } from "./new_task";
 import { plan_mode_respond_variants } from "./plan_mode_respond";
 import { read_file_variants } from "./read_file";
+import { render_plan_variants } from "./render_plan";
 import { replace_in_file_variants } from "./replace_in_file";
 import { search_files_variants } from "./search_files";
 import { subagent_variants } from "./subagent";
@@ -53,6 +54,7 @@ export function registerClineToolSets(): void {
 		...use_mcp_tool_variants,
 		...use_skill_variants,
 		...inspect_data_variants,
+		...render_plan_variants,
 		...web_fetch_variants,
 		...web_search_variants,
 		...write_to_file_variants,
