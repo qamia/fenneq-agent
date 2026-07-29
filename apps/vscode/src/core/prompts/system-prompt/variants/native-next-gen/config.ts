@@ -1,11 +1,21 @@
-import { isGPT5ModelFamily, isNextGenModelFamily, isNextGenModelProvider } from "@utils/model-utils"
-import { ModelFamily } from "@/shared/prompts"
-import { Logger } from "@/shared/services/Logger"
-import { ClineDefaultTool } from "@/shared/tools"
-import { SystemPromptSection } from "../../templates/placeholders"
-import { createVariant } from "../variant-builder"
-import { validateVariant } from "../variant-validator"
-import { TEMPLATE_OVERRIDES } from "./template"
+import {
+	isGPT5ModelFamily,
+	isNextGenModelFamily,
+	isNextGenModelProvider,
+} from "@utils/model-utils";
+import { ModelFamily } from "@/shared/prompts";
+import { Logger } from "@/shared/services/Logger";
+import { ClineDefaultTool } from "@/shared/tools";
+import { SystemPromptSection } from "../../templates/placeholders";
+import {
+	FENNEQ_AGENT_ROLE,
+	getFenneqCapabilities,
+	getFenneqObjective,
+	getFenneqRules,
+} from "../fenneq-optimization";
+import { createVariant } from "../variant-builder";
+import { validateVariant } from "../variant-validator";
+import { TEMPLATE_OVERRIDES } from "./template";
 
 // Type-safe variant configuration using the builder pattern
 export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
@@ -20,14 +30,14 @@ export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
 	})
 	.matcher((context) => {
 		if (!context.enableNativeToolCalls) {
-			return false
+			return false;
 		}
-		const providerInfo = context.providerInfo
+		const providerInfo = context.providerInfo;
 		if (!isNextGenModelProvider(providerInfo)) {
-			return false
+			return false;
 		}
-		const modelId = providerInfo.model.id.toLowerCase()
-		return !isGPT5ModelFamily(modelId) && isNextGenModelFamily(modelId)
+		const modelId = providerInfo.model.id.toLowerCase();
+		return !isGPT5ModelFamily(modelId) && isNextGenModelFamily(modelId);
 	})
 	.template(TEMPLATE_OVERRIDES.BASE)
 	.components(
@@ -44,6 +54,16 @@ export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
 		SystemPromptSection.USER_INSTRUCTIONS,
 		SystemPromptSection.SKILLS,
 	)
+	.overrideComponent(SystemPromptSection.AGENT_ROLE, {
+		template: FENNEQ_AGENT_ROLE,
+	})
+	.overrideComponent(SystemPromptSection.OBJECTIVE, {
+		template: getFenneqObjective,
+	})
+	.overrideComponent(SystemPromptSection.CAPABILITIES, {
+		template: getFenneqCapabilities,
+	})
+	.overrideComponent(SystemPromptSection.RULES, { template: getFenneqRules })
 	.tools(
 		ClineDefaultTool.ASK,
 		ClineDefaultTool.BASH,
@@ -52,6 +72,7 @@ export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
 		ClineDefaultTool.FILE_EDIT,
 		ClineDefaultTool.SEARCH,
 		ClineDefaultTool.LIST_FILES,
+		ClineDefaultTool.INSPECT_DATA,
 		ClineDefaultTool.LIST_CODE_DEF,
 		ClineDefaultTool.BROWSER,
 		ClineDefaultTool.WEB_FETCH,
@@ -85,18 +106,29 @@ export const config = createVariant(ModelFamily.NATIVE_NEXT_GEN)
 	.overrideComponent(SystemPromptSection.FEEDBACK, {
 		template: TEMPLATE_OVERRIDES.FEEDBACK,
 	})
-	.build()
+	.build();
 
 // Compile-time validation
-const validationResult = validateVariant({ ...config, id: ModelFamily.NATIVE_NEXT_GEN }, { strict: true })
+const validationResult = validateVariant(
+	{ ...config, id: ModelFamily.NATIVE_NEXT_GEN },
+	{ strict: true },
+);
 if (!validationResult.isValid) {
-	Logger.error("Native Next Gen variant configuration validation failed:", validationResult.errors)
-	throw new Error(`Invalid Native Next Gen variant configuration: ${validationResult.errors.join(", ")}`)
+	Logger.error(
+		"Native Next Gen variant configuration validation failed:",
+		validationResult.errors,
+	);
+	throw new Error(
+		`Invalid Native Next Gen variant configuration: ${validationResult.errors.join(", ")}`,
+	);
 }
 
 if (validationResult.warnings.length > 0) {
-	Logger.warn("Native Next Gen variant configuration warnings:", validationResult.warnings)
+	Logger.warn(
+		"Native Next Gen variant configuration warnings:",
+		validationResult.warnings,
+	);
 }
 
 // Export type information for better IDE support
-export type NativeNextGenVariantConfig = typeof config
+export type NativeNextGenVariantConfig = typeof config;

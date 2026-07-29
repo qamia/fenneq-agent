@@ -1,15 +1,28 @@
-import { isGPT5ModelFamily, isLocalModel, isNextGenModelFamily, isNextGenModelProvider } from "@utils/model-utils"
-import { ModelFamily } from "@/shared/prompts"
-import { Logger } from "@/shared/services/Logger"
-import { ClineDefaultTool } from "@/shared/tools"
-import { SystemPromptSection } from "../../templates/placeholders"
-import { createVariant } from "../variant-builder"
-import { validateVariant } from "../variant-validator"
-import { baseTemplate, rules_template } from "./template"
+import {
+	isGPT5ModelFamily,
+	isLocalModel,
+	isNextGenModelFamily,
+	isNextGenModelProvider,
+} from "@utils/model-utils";
+import { ModelFamily } from "@/shared/prompts";
+import { Logger } from "@/shared/services/Logger";
+import { ClineDefaultTool } from "@/shared/tools";
+import { SystemPromptSection } from "../../templates/placeholders";
+import {
+	FENNEQ_AGENT_ROLE,
+	getFenneqCapabilities,
+	getFenneqObjective,
+	getFenneqRules,
+} from "../fenneq-optimization";
+import { createVariant } from "../variant-builder";
+import { validateVariant } from "../variant-validator";
+import { baseTemplate, rules_template } from "./template";
 
 // Type-safe variant configuration using the builder pattern
 export const config = createVariant(ModelFamily.NEXT_GEN)
-	.description("Prompt tailored to newer frontier models with smarter agentic capabilities.")
+	.description(
+		"Prompt tailored to newer frontier models with smarter agentic capabilities.",
+	)
 	.version(1)
 	.tags("next-gen", "advanced", "production")
 	.labels({
@@ -19,17 +32,22 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 	})
 	.matcher((context) => {
 		// Match next-gen models
-		const providerInfo = context.providerInfo
-		if (isNextGenModelFamily(providerInfo.model.id) && !context.enableNativeToolCalls) {
-			return true
+		const providerInfo = context.providerInfo;
+		if (
+			isNextGenModelFamily(providerInfo.model.id) &&
+			!context.enableNativeToolCalls
+		) {
+			return true;
 		}
-		const modelId = providerInfo.model.id
+		const modelId = providerInfo.model.id;
 		return (
-			!(providerInfo.customPrompt === "compact" && isLocalModel(providerInfo)) &&
+			!(
+				providerInfo.customPrompt === "compact" && isLocalModel(providerInfo)
+			) &&
 			!isNextGenModelProvider(providerInfo) &&
 			isNextGenModelFamily(modelId) &&
 			!(isGPT5ModelFamily(modelId) && !modelId.includes("chat"))
-		)
+		);
 	})
 	.template(baseTemplate)
 	.components(
@@ -47,6 +65,16 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 		SystemPromptSection.USER_INSTRUCTIONS,
 		SystemPromptSection.SKILLS,
 	)
+	.overrideComponent(SystemPromptSection.AGENT_ROLE, {
+		template: FENNEQ_AGENT_ROLE,
+	})
+	.overrideComponent(SystemPromptSection.OBJECTIVE, {
+		template: getFenneqObjective,
+	})
+	.overrideComponent(SystemPromptSection.CAPABILITIES, {
+		template: getFenneqCapabilities,
+	})
+	.overrideComponent(SystemPromptSection.RULES, { template: getFenneqRules })
 	.tools(
 		ClineDefaultTool.BASH,
 		ClineDefaultTool.FILE_READ,
@@ -54,6 +82,7 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 		ClineDefaultTool.FILE_EDIT,
 		ClineDefaultTool.SEARCH,
 		ClineDefaultTool.LIST_FILES,
+		ClineDefaultTool.INSPECT_DATA,
 		ClineDefaultTool.LIST_CODE_DEF,
 		ClineDefaultTool.BROWSER,
 		ClineDefaultTool.WEB_FETCH,
@@ -77,18 +106,29 @@ export const config = createVariant(ModelFamily.NEXT_GEN)
 	.overrideComponent(SystemPromptSection.RULES, {
 		template: rules_template,
 	})
-	.build()
+	.build();
 
 // Compile-time validation
-const validationResult = validateVariant({ ...config, id: ModelFamily.NEXT_GEN }, { strict: true })
+const validationResult = validateVariant(
+	{ ...config, id: ModelFamily.NEXT_GEN },
+	{ strict: true },
+);
 if (!validationResult.isValid) {
-	Logger.error("Next-gen variant configuration validation failed:", validationResult.errors)
-	throw new Error(`Invalid next-gen variant configuration: ${validationResult.errors.join(", ")}`)
+	Logger.error(
+		"Next-gen variant configuration validation failed:",
+		validationResult.errors,
+	);
+	throw new Error(
+		`Invalid next-gen variant configuration: ${validationResult.errors.join(", ")}`,
+	);
 }
 
 if (validationResult.warnings.length > 0) {
-	Logger.warn("Next-gen variant configuration warnings:", validationResult.warnings)
+	Logger.warn(
+		"Next-gen variant configuration warnings:",
+		validationResult.warnings,
+	);
 }
 
 // Export type information for better IDE support
-export type NextGenVariantConfig = typeof config
+export type NextGenVariantConfig = typeof config;

@@ -1,7 +1,7 @@
-import { isGemini2dot5ModelFamily } from "@utils/model-utils"
-import { getShell } from "@utils/shell"
-import type { SystemPromptContext } from "@/core/prompts/system-prompt/types"
-import type { DeepPlanningVariant } from "../types"
+import { isGemini2dot5ModelFamily } from "@utils/model-utils";
+import { getShell } from "@utils/shell";
+import type { SystemPromptContext } from "@/core/prompts/system-prompt/types";
+import type { DeepPlanningVariant } from "../types";
 
 /**
  * Creates the Google Gemini 2.5 variant for deep-planning prompt
@@ -14,29 +14,30 @@ export function createGeminiVariant(): DeepPlanningVariant {
 		family: "gemini",
 		version: 1,
 		matcher: (context: SystemPromptContext) => {
-			const modelId = context.providerInfo?.model?.id
+			const modelId = context.providerInfo?.model?.id;
 			if (!modelId) {
-				return false
+				return false;
 			}
-			return isGemini2dot5ModelFamily(modelId)
+			return isGemini2dot5ModelFamily(modelId);
 		},
 		template: generateTemplate(),
-	}
+	};
 }
 
 /**
  * Generates the deep-planning template with shell-specific commands
  */
 function generateTemplate(): string {
-	const detectedShell = getShell()
+	const detectedShell = getShell();
 
 	// FIXME: detectedShell returns a non-string value on some Windows machines
-	let isPowerShell = false
+	let isPowerShell = false;
 	try {
 		isPowerShell =
 			detectedShell != null &&
 			typeof detectedShell === "string" &&
-			(detectedShell.toLowerCase().includes("powershell") || detectedShell.toLowerCase().includes("pwsh"))
+			(detectedShell.toLowerCase().includes("powershell") ||
+				detectedShell.toLowerCase().includes("pwsh"));
 	} catch {}
 
 	return `<explicit_instructions type="deep-planning">
@@ -281,5 +282,5 @@ Your implementation plan should be detailed enough that another developer could 
 
 Below is the user's input when they indicated that they wanted to create a comprehensive implementation plan.
 </explicit_instructions>
-`
+`;
 }

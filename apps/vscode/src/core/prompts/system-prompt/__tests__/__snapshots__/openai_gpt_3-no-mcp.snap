@@ -131,16 +131,16 @@ Usage:
 <task_progress>Checklist here (optional)</task_progress>
 </list_files>
 
-## list_code_definition_names
-Description: Request to list definition names (classes, functions, methods, etc.) used in source code files at the top level of the specified directory. This tool provides insights into the codebase structure and important constructs, encapsulating high-level concepts and relationships that are crucial for understanding the overall architecture.
+## inspect_data
+Description: Inspect a tabular data file (.csv, .tsv, .txt, .xlsx) and return a compact schema-level summary: sheets, columns with inferred types and value ranges, data row counts, missing-value counts, and a few sample rows. Use this BEFORE formulating any optimization model on a data file — it shows the file's shape without flooding the context with raw rows. Read-only. For non-tabular files use read_file.
 Parameters:
-- path: (required) The path of a directory (not a file) relative to the current working directory /test/project. Lists definitions across all source files in that directory. To inspect a single file, use read_file instead.
+- path: (required) The path of the data file (relative to the current working directory /test/project). Supported: .csv, .tsv, .txt (delimited), .xlsx.
 - task_progress: (optional) A checklist showing task progress after this tool use is completed. The task_progress parameter must be included as a separate parameter inside of the parent tool call, it must be separate from other parameters such as content, arguments, etc. (See 'UPDATING TASK PROGRESS' section for more details)
 Usage:
-<list_code_definition_names>
-<path>Directory path here</path>
+<inspect_data>
+<path>Data file path here</path>
 <task_progress>Checklist here (optional)</task_progress>
-</list_code_definition_names>
+</inspect_data>
 
 ## browser_action
 Description: Request to interact with a Puppeteer-controlled browser. Every action, except `close`, will be responded to with a screenshot of the browser's current state, along with any new console logs. You may only perform one browser action per message, and wait for the user's response including a screenshot and logs to determine the next action.

@@ -214,15 +214,15 @@
   {
     "type": "function",
     "function": {
-      "name": "list_code_definition_names",
-      "description": "Request to list definition names (classes, functions, methods, etc.) used in source code files at the top level of the specified directory. This tool provides insights into the codebase structure and important constructs, encapsulating high-level concepts and relationships that are crucial for understanding the overall architecture.",
+      "name": "inspect_data",
+      "description": "Inspect a tabular data file (.csv, .tsv, .txt, .xlsx) and return a compact schema-level summary: sheets, columns with inferred types and value ranges, data row counts, missing-value counts, and a few sample rows. Use this BEFORE formulating any optimization model on a data file — it shows the file's shape without flooding the context with raw rows. Read-only. For non-tabular files use read_file.",
       "strict": false,
       "parameters": {
         "type": "object",
         "properties": {
           "path": {
             "type": "string",
-            "description": "The path of a directory (not a file) relative to the current working directory /test/project. Lists definitions across all source files in that directory. To inspect a single file, use read_file instead."
+            "description": "The path of the data file (relative to the current working directory /test/project). Supported: .csv, .tsv, .txt (delimited), .xlsx."
           },
           "task_progress": {
             "type": "string",

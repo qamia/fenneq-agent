@@ -1,34 +1,37 @@
-import type { SystemPromptContext } from "@/core/prompts/system-prompt/types"
-import { Logger } from "@/shared/services/Logger"
-import type { DeepPlanningVariant, DeepPlanningRegistry as IDeepPlanningRegistry } from "./types"
+import type { SystemPromptContext } from "@/core/prompts/system-prompt/types";
+import { Logger } from "@/shared/services/Logger";
+import type {
+	DeepPlanningVariant,
+	DeepPlanningRegistry as IDeepPlanningRegistry,
+} from "./types";
 import {
 	createAnthropicVariant,
 	createGemini3Variant,
 	createGeminiVariant,
 	createGenericVariant,
 	createGPT51Variant,
-} from "./variants"
+} from "./variants";
 
 /**
  * Singleton registry for managing deep-planning prompt variants
  * Selects appropriate variant based on model family detection
  */
 class DeepPlanningRegistry implements IDeepPlanningRegistry {
-	private static instance: DeepPlanningRegistry | null = null
-	private variants: Map<string, DeepPlanningVariant> = new Map()
-	private genericVariant: DeepPlanningVariant
+	private static instance: DeepPlanningRegistry | null = null;
+	private variants: Map<string, DeepPlanningVariant> = new Map();
+	private genericVariant: DeepPlanningVariant;
 
 	private constructor() {
 		// Initialize all variants
-		this.registerVariant(createAnthropicVariant())
-		this.registerVariant(createGeminiVariant())
-		this.registerVariant(createGemini3Variant())
-		this.registerVariant(createGPT51Variant())
+		this.registerVariant(createAnthropicVariant());
+		this.registerVariant(createGeminiVariant());
+		this.registerVariant(createGemini3Variant());
+		this.registerVariant(createGPT51Variant());
 
 		// Generic variant must be registered last as fallback
-		const genericVariant = createGenericVariant()
-		this.registerVariant(genericVariant)
-		this.genericVariant = genericVariant
+		const genericVariant = createGenericVariant();
+		this.registerVariant(genericVariant);
+		this.genericVariant = genericVariant;
 	}
 
 	/**
@@ -36,23 +39,23 @@ class DeepPlanningRegistry implements IDeepPlanningRegistry {
 	 */
 	public static getInstance(): DeepPlanningRegistry {
 		if (!DeepPlanningRegistry.instance) {
-			DeepPlanningRegistry.instance = new DeepPlanningRegistry()
+			DeepPlanningRegistry.instance = new DeepPlanningRegistry();
 		}
-		return DeepPlanningRegistry.instance
+		return DeepPlanningRegistry.instance;
 	}
 
 	/**
 	 * Register a new variant in the registry
 	 */
 	public register(variant: DeepPlanningVariant): void {
-		this.registerVariant(variant)
+		this.registerVariant(variant);
 	}
 
 	/**
 	 * Internal method to register a variant
 	 */
 	private registerVariant(variant: DeepPlanningVariant): void {
-		this.variants.set(variant.id, variant)
+		this.variants.set(variant.id, variant);
 	}
 
 	/**
@@ -66,21 +69,24 @@ class DeepPlanningRegistry implements IDeepPlanningRegistry {
 			for (const variant of this.variants.values()) {
 				// Skip generic variant in iteration (it's the fallback)
 				if (variant.id === "generic") {
-					continue
+					continue;
 				}
 
 				// Test if this variant matches the context
 				if (variant.matcher(context)) {
-					return variant
+					return variant;
 				}
 			}
 
 			// No match found, return generic variant
-			return this.genericVariant
+			return this.genericVariant;
 		} catch (error) {
 			// On any error, safely fall back to generic variant
-			Logger.warn("Error selecting deep-planning variant, falling back to generic:", error)
-			return this.genericVariant
+			Logger.warn(
+				"Error selecting deep-planning variant, falling back to generic:",
+				error,
+			);
+			return this.genericVariant;
 		}
 	}
 
@@ -88,7 +94,7 @@ class DeepPlanningRegistry implements IDeepPlanningRegistry {
 	 * Get all registered variants
 	 */
 	public getAll(): DeepPlanningVariant[] {
-		return Array.from(this.variants.values())
+		return Array.from(this.variants.values());
 	}
 }
 
@@ -96,5 +102,5 @@ class DeepPlanningRegistry implements IDeepPlanningRegistry {
  * Export singleton instance getter
  */
 export function getDeepPlanningRegistry(): DeepPlanningRegistry {
-	return DeepPlanningRegistry.getInstance()
+	return DeepPlanningRegistry.getInstance();
 }
