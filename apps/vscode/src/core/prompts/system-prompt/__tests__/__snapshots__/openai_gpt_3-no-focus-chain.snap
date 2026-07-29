@@ -118,6 +118,15 @@ Usage:
 <recursive>true or false (optional)</recursive>
 </list_files>
 
+## inspect_data
+Description: Inspect a tabular data file (.csv, .tsv, .txt, .xlsx) and return a compact schema-level summary: sheets, columns with inferred types and value ranges, data row counts, missing-value counts, and a few sample rows. Use this BEFORE formulating any optimization model on a data file — it shows the file's shape without flooding the context with raw rows. Read-only. For non-tabular files use read_file.
+Parameters:
+- path: (required) The path of the data file (relative to the current working directory /test/project). Supported: .csv, .tsv, .txt (delimited), .xlsx.
+Usage:
+<inspect_data>
+<path>Data file path here</path>
+</inspect_data>
+
 ## browser_action
 Description: Request to interact with a Puppeteer-controlled browser. Every action, except `close`, will be responded to with a screenshot of the browser's current state, along with any new console logs. You may only perform one browser action per message, and wait for the user's response including a screenshot and logs to determine the next action.
 - The sequence of actions **must always start with** launching the browser at a URL, and **must always end with** closing the browser. If you need to visit a new URL that is not possible to navigate to from the current webpage, you must first close the browser, then launch again at the new URL.
