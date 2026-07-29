@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import type { ToolUse } from "@core/assistant-message";
 import { formatResponse } from "@core/prompts/responses";
 import { resolveWorkspacePath } from "@core/workspace";
+import { showHtmlPanel } from "@integrations/misc/html-panel";
 import {
 	generatePlanReportHtml,
 	parsePlanReportSpec,
@@ -117,8 +118,10 @@ export class RenderPlanToolHandler implements IFullyManagedTool {
 		let displayPath: string;
 		let html: string;
 		let sectionSummary: string;
+		let reportTitle: string;
 		try {
 			const spec = parsePlanReportSpec(data!);
+			reportTitle = spec.title;
 			html = generatePlanReportHtml(spec);
 			sectionSummary = [
 				spec.kpis?.length ? `${spec.kpis.length} KPIs` : undefined,
@@ -209,19 +212,27 @@ export class RenderPlanToolHandler implements IFullyManagedTool {
 			);
 		}
 
-		// Opening the report is best-effort; the file on disk is the deliverable.
-		let opened = true;
-		try {
-			await openExternal(pathToFileURL(absolutePath).href);
-		} catch {
-			opened = false;
+		// Show the report beside the chat; fall back to the default browser.
+		// Both are best-effort — the file on disk is the deliverable.
+		let openedIn = "nowhere";
+		if (await showHtmlPanel(reportTitle!, html)) {
+			openedIn = "panel";
+		} else {
+			try {
+				await openExternal(pathToFileURL(absolutePath).href);
+				openedIn = "browser";
+			} catch {
+				// leave as "nowhere"
+			}
 		}
 
 		return (
 			`The plan report was written to ${displayPath} (${sectionSummary})` +
-			(opened
-				? " and opened in the default browser."
-				: ". Open it in a browser to view; automatic opening failed.")
+			(openedIn === "panel"
+				? " and opened in a panel beside the chat."
+				: openedIn === "browser"
+					? " and opened in the default browser."
+					: ". Open it in a browser to view; automatic opening failed.")
 		);
 	}
 }
