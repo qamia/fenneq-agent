@@ -1,23 +1,39 @@
-import { BANNER_DATA, BannerAction, BannerActionType, BannerCardData } from "@shared/cline/banner"
-import { EmptyRequest } from "@shared/proto/cline/common"
-import type { Worktree } from "@shared/proto/cline/worktree"
-import { TrackWorktreeViewOpenedRequest } from "@shared/proto/cline/worktree"
-import { GitBranch } from "lucide-react"
-import React, { useCallback, useEffect, useMemo, useState } from "react"
-import BannerCarousel from "@/components/common/BannerCarousel"
-import WhatsNewModal from "@/components/common/WhatsNewModal"
-import HistoryPreview from "@/components/history/HistoryPreview"
-import { useApiConfigurationHandlers } from "@/components/settings/utils/useApiConfigurationHandlers"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import HomeHeader from "@/components/welcome/HomeHeader"
-import { SuggestedTasks } from "@/components/welcome/SuggestedTasks"
-import CreateWorktreeModal from "@/components/worktrees/CreateWorktreeModal"
-import { useClineAuth } from "@/context/ClineAuthContext"
-import { useExtensionState } from "@/context/ExtensionStateContext"
-import { AccountServiceClient, StateServiceClient, UiServiceClient, WorktreeServiceClient } from "@/services/grpc-client"
-import { convertBannerData } from "@/utils/bannerUtils"
-import { getCurrentPlatform } from "@/utils/platformUtils"
-import { WelcomeSectionProps } from "../../types/chatTypes"
+import {
+	BANNER_DATA,
+	type BannerAction,
+	BannerActionType,
+	type BannerCardData,
+} from "@shared/cline/banner";
+import { EmptyRequest } from "@shared/proto/cline/common";
+import type { Worktree } from "@shared/proto/cline/worktree";
+import { TrackWorktreeViewOpenedRequest } from "@shared/proto/cline/worktree";
+import { GitBranch } from "lucide-react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import BannerCarousel from "@/components/common/BannerCarousel";
+import WhatsNewModal from "@/components/common/WhatsNewModal";
+import HistoryPreview from "@/components/history/HistoryPreview";
+import { useApiConfigurationHandlers } from "@/components/settings/utils/useApiConfigurationHandlers";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import EngagementCard from "@/components/welcome/EngagementCard";
+import HomeHeader from "@/components/welcome/HomeHeader";
+import { SuggestedTasks } from "@/components/welcome/SuggestedTasks";
+import CreateWorktreeModal from "@/components/worktrees/CreateWorktreeModal";
+import { useClineAuth } from "@/context/ClineAuthContext";
+import { useExtensionState } from "@/context/ExtensionStateContext";
+import {
+	AccountServiceClient,
+	StateServiceClient,
+	UiServiceClient,
+	WorktreeServiceClient,
+} from "@/services/grpc-client";
+import { convertBannerData } from "@/utils/bannerUtils";
+import { getCurrentPlatform } from "@/utils/platformUtils";
+import type { WelcomeSectionProps } from "../../types/chatTypes";
 
 /**
  * Welcome section shown when there's no active task
@@ -31,33 +47,38 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 	taskHistory,
 	shouldShowQuickWins,
 }) => {
-	const { lastDismissedInfoBannerVersion, lastDismissedCliBannerVersion, lastDismissedModelBannerVersion, dismissedBanners } =
-		useExtensionState()
+	const {
+		lastDismissedInfoBannerVersion,
+		lastDismissedCliBannerVersion,
+		lastDismissedModelBannerVersion,
+		dismissedBanners,
+	} = useExtensionState();
 
 	// Track if we've shown the "What's New" modal this session
-	const [hasShownWhatsNewModal, setHasShownWhatsNewModal] = useState(false)
-	const [showWhatsNewModal, setShowWhatsNewModal] = useState(false)
+	const [hasShownWhatsNewModal, setHasShownWhatsNewModal] = useState(false);
+	const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
 
 	// Quick launch worktree modal
-	const [showCreateWorktreeModal, setShowCreateWorktreeModal] = useState(false)
-	const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null)
-	const [currentWorktree, setCurrentWorktree] = useState<Worktree | null>(null)
+	const [showCreateWorktreeModal, setShowCreateWorktreeModal] = useState(false);
+	const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
+	const [currentWorktree, setCurrentWorktree] = useState<Worktree | null>(null);
 
 	// Check if we're in a git repo and get current worktree info on mount
 	useEffect(() => {
 		WorktreeServiceClient.listWorktrees(EmptyRequest.create({}))
 			.then((result) => {
-				const canUseWorktrees = result.isGitRepo && !result.isMultiRoot && !result.isSubfolder
-				setIsGitRepo(canUseWorktrees)
+				const canUseWorktrees =
+					result.isGitRepo && !result.isMultiRoot && !result.isSubfolder;
+				setIsGitRepo(canUseWorktrees);
 				if (canUseWorktrees) {
-					const current = result.worktrees.find((w) => w.isCurrent)
-					setCurrentWorktree(current || null)
+					const current = result.worktrees.find((w) => w.isCurrent);
+					setCurrentWorktree(current || null);
 				}
 			})
-			.catch(() => setIsGitRepo(false))
-	}, [])
+			.catch(() => setIsGitRepo(false));
+	}, []);
 
-	const { clineUser } = useClineAuth()
+	const { clineUser } = useClineAuth();
 	const {
 		openRouterModels,
 		navigateToSettings,
@@ -66,35 +87,42 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 		worktreesEnabled,
 		banners,
 		welcomeBanners,
-	} = useExtensionState()
-	const { handleFieldsChange } = useApiConfigurationHandlers()
+	} = useExtensionState();
+	const { handleFieldsChange } = useApiConfigurationHandlers();
 
 	// Open modal once we have welcome banners
 	useEffect(() => {
-		if (showAnnouncement && !hasShownWhatsNewModal && welcomeBanners && welcomeBanners.length > 0) {
-			setShowWhatsNewModal(true)
-			setHasShownWhatsNewModal(true)
+		if (
+			showAnnouncement &&
+			!hasShownWhatsNewModal &&
+			welcomeBanners &&
+			welcomeBanners.length > 0
+		) {
+			setShowWhatsNewModal(true);
+			setHasShownWhatsNewModal(true);
 		}
-	}, [welcomeBanners, showAnnouncement, hasShownWhatsNewModal])
+	}, [welcomeBanners, showAnnouncement, hasShownWhatsNewModal]);
 
 	const handleCloseWhatsNewModal = useCallback(() => {
-		setShowWhatsNewModal(false)
+		setShowWhatsNewModal(false);
 		// Call hideAnnouncement to persist dismissal (same as old banner behavior)
-		hideAnnouncement()
+		hideAnnouncement();
 		if (welcomeBanners && welcomeBanners.length > 0) {
 			for (const banner of welcomeBanners) {
-				StateServiceClient.dismissBanner({ value: banner.id }).catch(console.error)
+				StateServiceClient.dismissBanner({ value: banner.id }).catch(
+					console.error,
+				);
 			}
 		}
-	}, [hideAnnouncement, welcomeBanners])
+	}, [hideAnnouncement, welcomeBanners]);
 
 	// Handle click on home page worktree element with telemetry
 	const handleWorktreeClick = useCallback(() => {
-		WorktreeServiceClient.trackWorktreeViewOpened(TrackWorktreeViewOpenedRequest.create({ source: "home_page" })).catch(
-			console.error,
-		)
-		navigateToWorktrees()
-	}, [navigateToWorktrees])
+		WorktreeServiceClient.trackWorktreeViewOpened(
+			TrackWorktreeViewOpenedRequest.create({ source: "home_page" }),
+		).catch(console.error);
+		navigateToWorktrees();
+	}, [navigateToWorktrees]);
 
 	/**
 	 * Check if a banner has been dismissed based on its ID or legacy version
@@ -103,25 +131,33 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 		(bannerId: string): boolean => {
 			// Check if banner is in the dismissed banners list (new approach)
 			if (
-				dismissedBanners?.some((dismissed: { bannerId: string; dismissedAt: number }) => dismissed.bannerId === bannerId)
+				dismissedBanners?.some(
+					(dismissed: { bannerId: string; dismissedAt: number }) =>
+						dismissed.bannerId === bannerId,
+				)
 			) {
-				return true
+				return true;
 			}
 
 			// Legacy version-based tracking (deprecated)
 			if (bannerId.startsWith("info-banner")) {
-				return (lastDismissedInfoBannerVersion ?? 0) >= 1
+				return (lastDismissedInfoBannerVersion ?? 0) >= 1;
 			}
 			if (bannerId.startsWith("new-model")) {
-				return (lastDismissedModelBannerVersion ?? 0) >= 1
+				return (lastDismissedModelBannerVersion ?? 0) >= 1;
 			}
 			if (bannerId.startsWith("cli-")) {
-				return (lastDismissedCliBannerVersion ?? 0) >= 1
+				return (lastDismissedCliBannerVersion ?? 0) >= 1;
 			}
-			return false
+			return false;
 		},
-		[dismissedBanners, lastDismissedInfoBannerVersion, lastDismissedModelBannerVersion, lastDismissedCliBannerVersion],
-	)
+		[
+			dismissedBanners,
+			lastDismissedInfoBannerVersion,
+			lastDismissedModelBannerVersion,
+			lastDismissedCliBannerVersion,
+		],
+	);
 
 	/**
 	 * Banner configuration from backend
@@ -132,20 +168,23 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 		// Filter banners based on version tracking and user status
 		return BANNER_DATA.filter((banner) => {
 			if (isBannerDismissed(banner.id)) {
-				return false
+				return false;
 			}
 
 			if (banner.isClineUserOnly !== undefined) {
-				return banner.isClineUserOnly === !!clineUser
+				return banner.isClineUserOnly === !!clineUser;
 			}
 
-			if (banner.platforms && !banner.platforms.includes(getCurrentPlatform())) {
-				return false
+			if (
+				banner.platforms &&
+				!banner.platforms.includes(getCurrentPlatform())
+			) {
+				return false;
 			}
 
-			return true
-		})
-	}, [isBannerDismissed, clineUser])
+			return true;
+		});
+	}, [isBannerDismissed, clineUser]);
 
 	/**
 	 * Action handler - maps action types to actual implementations
@@ -155,13 +194,13 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 			switch (action.action) {
 				case BannerActionType.Link:
 					if (action.arg) {
-						UiServiceClient.openUrl({ value: action.arg }).catch(console.error)
+						UiServiceClient.openUrl({ value: action.arg }).catch(console.error);
 					}
-					break
+					break;
 
 				case BannerActionType.SetModel: {
-					const modelId = action.arg || "anthropic/claude-sonnet-4.5"
-					const initialModelTab = action.tab || "recommended"
+					const modelId = action.arg || "anthropic/claude-sonnet-4.5";
+					const initialModelTab = action.tab || "recommended";
 					handleFieldsChange({
 						planModeOpenRouterModelId: modelId,
 						actModeOpenRouterModelId: modelId,
@@ -169,42 +208,54 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 						actModeOpenRouterModelInfo: openRouterModels[modelId],
 						planModeApiProvider: "cline",
 						actModeApiProvider: "cline",
-					})
-					navigateToSettingsModelPicker({ targetSection: "api-config", initialModelTab })
-					break
+					});
+					navigateToSettingsModelPicker({
+						targetSection: "api-config",
+						initialModelTab,
+					});
+					break;
 				}
 
 				case BannerActionType.ShowAccount:
-					AccountServiceClient.accountLoginClicked({}).catch((err) => console.error("Failed to get login URL:", err))
-					break
+					AccountServiceClient.accountLoginClicked({}).catch((err) =>
+						console.error("Failed to get login URL:", err),
+					);
+					break;
 
 				case BannerActionType.ShowApiSettings:
 					if (action.arg) {
 						// Pre-select the provider before navigating
 						handleFieldsChange({
+							// biome-ignore lint/suspicious/noExplicitAny: upstream banner args are untyped provider ids
 							planModeApiProvider: action.arg as any,
+							// biome-ignore lint/suspicious/noExplicitAny: upstream banner args are untyped provider ids
 							actModeApiProvider: action.arg as any,
-						})
+						});
 					}
-					navigateToSettings("api-config")
-					break
+					navigateToSettings("api-config");
+					break;
 
 				case BannerActionType.ShowFeatureSettings:
-					navigateToSettings("features")
-					break
+					navigateToSettings("features");
+					break;
 
 				case BannerActionType.InstallCli:
 					StateServiceClient.installClineCli({}).catch((error) =>
 						console.error("Failed to initiate CLI installation:", error),
-					)
-					break
+					);
+					break;
 
 				default:
-					console.warn("Unknown banner action:", action.action)
+					console.warn("Unknown banner action:", action.action);
 			}
 		},
-		[handleFieldsChange, openRouterModels, navigateToSettings, navigateToSettingsModelPicker],
-	)
+		[
+			handleFieldsChange,
+			openRouterModels,
+			navigateToSettings,
+			navigateToSettingsModelPicker,
+		],
+	);
 
 	/**
 	 * Dismissal handler - updates version tracking
@@ -214,16 +265,24 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 		// Banner versions are **deprecated**. Going forward, we are tracking which banners have
 		// been dismissed using the **banner ID**.
 		if (bannerId.startsWith("info-banner")) {
-			StateServiceClient.updateInfoBannerVersion({ value: 1 }).catch(console.error)
+			StateServiceClient.updateInfoBannerVersion({ value: 1 }).catch(
+				console.error,
+			);
 		} else if (bannerId.startsWith("new-model")) {
-			StateServiceClient.updateModelBannerVersion({ value: 1 }).catch(console.error)
+			StateServiceClient.updateModelBannerVersion({ value: 1 }).catch(
+				console.error,
+			);
 		} else if (bannerId.startsWith("cli-")) {
-			StateServiceClient.updateCliBannerVersion({ value: 1 }).catch(console.error)
+			StateServiceClient.updateCliBannerVersion({ value: 1 }).catch(
+				console.error,
+			);
 		} else {
 			// Mark the banner as dismissed by its ID.
-			StateServiceClient.dismissBanner({ value: bannerId }).catch(console.error)
+			StateServiceClient.dismissBanner({ value: bannerId }).catch(
+				console.error,
+			);
 		}
-	}, [])
+	}, []);
 
 	/**
 	 * Build array of active banners for carousel
@@ -236,7 +295,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 				onAction: handleBannerAction,
 				onDismiss: handleBannerDismiss,
 			}),
-		)
+		);
 
 		// Add banners from extension state (if any)
 		const extensionStateBanners = (banners ?? []).map((banner) =>
@@ -244,11 +303,11 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 				onAction: handleBannerAction,
 				onDismiss: handleBannerDismiss,
 			}),
-		)
+		);
 
 		// Combine both sources: extension state banners first, then hardcoded banners
-		return [...extensionStateBanners, ...hardcodedBanners]
-	}, [bannerConfig, banners, clineUser, handleBannerAction, handleBannerDismiss])
+		return [...extensionStateBanners, ...hardcodedBanners];
+	}, [bannerConfig, banners, handleBannerAction, handleBannerDismiss]);
 
 	return (
 		<div className="flex flex-col flex-1 w-full h-full p-0 m-0">
@@ -264,11 +323,16 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 				{!showWhatsNewModal && (
 					<>
 						<BannerCarousel banners={activeBanners} />
-						{!shouldShowQuickWins && taskHistory.length > 0 && <HistoryPreview showHistoryView={showHistoryView} />}
+						<EngagementCard />
+						{!shouldShowQuickWins && taskHistory.length > 0 && (
+							<HistoryPreview showHistoryView={showHistoryView} />
+						)}
 						{/* Quick launch worktree button */}
-						{isGitRepo && worktreesEnabled?.featureFlag && worktreesEnabled?.user && (
-							<div className="flex flex-col items-center gap-3 mt-2 mb-4 px-5">
-								{/* TODO: Re-enable once worktree creation is stable
+						{isGitRepo &&
+							worktreesEnabled?.featureFlag &&
+							worktreesEnabled?.user && (
+								<div className="flex flex-col items-center gap-3 mt-2 mb-4 px-5">
+									{/* TODO: Re-enable once worktree creation is stable
 								<Tooltip>
 									<TooltipTrigger asChild>
 										<button
@@ -285,32 +349,34 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 									</TooltipContent>
 								</Tooltip>
 								*/}
-								{currentWorktree && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<button
-												className="flex flex-col items-center gap-0.5 text-xs text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-foreground)] cursor-pointer bg-transparent border-none p-1 rounded"
-												onClick={handleWorktreeClick}
-												type="button">
-												<div className="flex items-center gap-1.5 text-xs">
-													<GitBranch className="w-3 h-3 stroke-[2.5] flex-shrink-0" />
-													<span className="break-all text-center">
-														<span className="font-semibold">Current:</span>{" "}
-														{currentWorktree.branch || "detached HEAD"}
+									{currentWorktree && (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<button
+													className="flex flex-col items-center gap-0.5 text-xs text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-foreground)] cursor-pointer bg-transparent border-none p-1 rounded"
+													onClick={handleWorktreeClick}
+													type="button"
+												>
+													<div className="flex items-center gap-1.5 text-xs">
+														<GitBranch className="w-3 h-3 stroke-[2.5] flex-shrink-0" />
+														<span className="break-all text-center">
+															<span className="font-semibold">Current:</span>{" "}
+															{currentWorktree.branch || "detached HEAD"}
+														</span>
+													</div>
+													<span className="break-all text-center max-w-[300px]">
+														{currentWorktree.path}
 													</span>
-												</div>
-												<span className="break-all text-center max-w-[300px]">
-													{currentWorktree.path}
-												</span>
-											</button>
-										</TooltipTrigger>
-										<TooltipContent side="bottom">
-											View and manage git worktrees. Great for running parallel FenneQ tasks.
-										</TooltipContent>
-									</Tooltip>
-								)}
-							</div>
-						)}
+												</button>
+											</TooltipTrigger>
+											<TooltipContent side="bottom">
+												View and manage git worktrees. Great for running
+												parallel FenneQ tasks.
+											</TooltipContent>
+										</Tooltip>
+									)}
+								</div>
+							)}
 					</>
 				)}
 			</div>
@@ -323,5 +389,5 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 				openAfterCreate={true}
 			/>
 		</div>
-	)
-}
+	);
+};
