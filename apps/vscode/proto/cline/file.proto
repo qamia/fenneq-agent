@@ -93,6 +93,27 @@ service FileService {
 
   // Deletes an existing skill directory
   rpc deleteSkillFile(DeleteSkillRequest) returns (SkillsToggles);
+
+  // Reads the workspace's engagement (engagement.md manifest, decisions.md
+  // log, artifact folders) for the welcome-screen engagement card
+  rpc getEngagementInfo(EmptyRequest) returns (EngagementInfo);
+}
+
+// The consulting engagement rooted in the current workspace (file-backed:
+// engagement.md + decisions.md + data/ models/ reports/). exists=false when
+// the workspace has no engagement manifest.
+message EngagementInfo {
+  bool exists = 1;
+  string engagement_id = 2;
+  string client = 3;
+  string title = 4;
+  string status = 5;
+  string opened = 6;
+  int32 decision_count = 7;
+  repeated string recent_decisions = 8;
+  repeated string report_files = 9;
+  int32 model_count = 10;
+  int32 data_count = 11;
 }
 
 // Response for refreshRules operation
