@@ -2,6 +2,7 @@ import type { Boolean, EmptyRequest } from "@shared/proto/cline/common"
 import { useCallback, useEffect } from "react"
 import AccountView from "./components/account/AccountView"
 import ChatView from "./components/chat/ChatView"
+import FenneqView from "./components/fenneq/FenneqView"
 import HistoryView from "./components/history/HistoryView"
 import McpView from "./components/mcp/configuration/McpConfigurationView"
 import OnboardingView from "./components/onboarding/OnboardingView"
@@ -9,7 +10,9 @@ import SettingsView from "./components/settings/SettingsView"
 import WorktreesView from "./components/worktrees/WorktreesView"
 import { useClineAuth } from "./context/ClineAuthContext"
 import { useExtensionState } from "./context/ExtensionStateContext"
+import { useFenneqMode } from "./context/FenneqModeContext"
 import { Providers } from "./Providers"
+import "./fenneq-mode.css"
 import { UiServiceClient } from "./services/grpc-client"
 
 const AppContent = () => {
@@ -37,6 +40,16 @@ const AppContent = () => {
 	} = useExtensionState()
 
 	const { clineUser, organizations, activeOrganization } = useClineAuth()
+	const { showFenneq, hideFenneq } = useFenneqMode()
+
+	// The FenneQ view lives outside the extension-state navigation, so close it
+	// whenever one of the other top-level views takes over.
+	const anotherViewIsOpen = showSettings || showHistory || showMcp || showAccount || showWorktrees
+	useEffect(() => {
+		if (anotherViewIsOpen) {
+			hideFenneq()
+		}
+	}, [anotherViewIsOpen, hideFenneq])
 
 	const showUpdateAnnouncementModal = useCallback(() => {
 		setShowAnnouncement(true)
@@ -65,7 +78,8 @@ const AppContent = () => {
 	}
 
 	return (
-		<div className="flex h-screen w-full flex-col">
+		<div className="fenneq-mode-surface flex h-screen w-full flex-col">
+			{showFenneq && <FenneqView onDone={hideFenneq} />}
 			{showSettings && <SettingsView onDone={hideSettings} targetSection={settingsTargetSection} />}
 			{showHistory && <HistoryView onDone={hideHistory} />}
 			{showMcp && <McpView initialTab={mcpTab} onDone={closeMcpView} />}
@@ -81,7 +95,7 @@ const AppContent = () => {
 			{/* Do not conditionally load ChatView, it's expensive and there's state we don't want to lose (user input, disableInput, askResponse promise, etc.) */}
 			<ChatView
 				hideAnnouncement={hideAnnouncement}
-				isHidden={showSettings || showHistory || showMcp || showAccount || showWorktrees}
+				isHidden={anotherViewIsOpen || showFenneq}
 				showAnnouncement={showAnnouncement}
 				showHistoryView={navigateToHistory}
 			/>

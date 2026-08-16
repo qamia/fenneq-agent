@@ -1,0 +1,52 @@
+/*
+ * FenneQ mode theming.
+ *
+ * The active mode is published as `data-fenneq-mode` on <html> by
+ * FenneqModeContext. Everything here is a tint layered over the host theme's
+ * own colors, so both VSCode light and dark themes stay readable.
+ *
+ * `color-mix()` needs Chromium 111+; the extension's engine floor is VSCode
+ * ^1.84.0 (Chromium 114), so it is safe to rely on here.
+ */
+
+:root {
+	/* Accent per mode — used by the navbar icon and the radio group. */
+	--fenneq-assistant-accent: #9663f1;
+	--fenneq-harness-accent: #e0902a;
+
+	--fenneq-accent: var(--fenneq-assistant-accent);
+	--fenneq-surface: var(--vscode-sideBar-background);
+}
+
+:root[data-fenneq-mode="assistant"] {
+	--fenneq-accent: var(--fenneq-assistant-accent);
+	--fenneq-surface: color-mix(
+		in srgb,
+		var(--fenneq-assistant-accent) 7%,
+		var(--vscode-sideBar-background)
+	);
+}
+
+:root[data-fenneq-mode="harness"] {
+	--fenneq-accent: var(--fenneq-harness-accent);
+	--fenneq-surface: color-mix(
+		in srgb,
+		var(--fenneq-harness-accent) 9%,
+		var(--vscode-sideBar-background)
+	);
+}
+
+/*
+ * The app shell paints the tint. ChatLayout is transparent, so this shows
+ * through the chat view without touching any of its own surfaces.
+ */
+.fenneq-mode-surface {
+	background-color: var(--fenneq-surface);
+	transition: background-color 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.fenneq-mode-surface {
+		transition: none;
+	}
+}
