@@ -57,7 +57,7 @@ const agentFeatures: FeatureToggle[] = [
 	{
 		id: "strict-plan-mode",
 		label: "Strict Plan Mode",
-		description: "Prevents file edits while in Plan mode",
+		description: "Prevents file edits while in Assist mode",
 		stateKey: "strictPlanModeEnabled",
 		settingKey: "strictPlanModeEnabled",
 	},
@@ -121,7 +121,7 @@ const experimentalFeatures: FeatureToggle[] = [
 		id: "yolo",
 		label: "Yolo Mode",
 		description:
-			"Execute tasks without user's confirmation. Auto-switches from Plan to Act mode and disables the ask question tool. Use with extreme caution.",
+			"Execute tasks without user's confirmation. Auto-switches from Assist to Harness mode and disables the ask question tool. Use with extreme caution.",
 		stateKey: "yoloModeToggled",
 		settingKey: "yoloModeToggled",
 	},

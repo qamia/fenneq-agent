@@ -1609,13 +1609,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							</ModelContainer>
 						</ButtonGroup>
 					</div>
-					{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
+					{/* Tooltip for Assist/Harness toggle remains outside the conditional rendering */}
 					<Tooltip>
 						<TooltipContent
 							className="text-xs px-2 flex flex-col gap-1"
 							hidden={shownTooltipMode === null}
 							side="top">
-							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, FenneQ will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
+							{`In ${shownTooltipMode === "act" ? "Harness" : "Assist"} mode, FenneQ will ${shownTooltipMode === "act" ? "let the agentic platform drive the task end to end" : "gather information and advise before acting"}`}
 							<p className="text-description/80 text-xs mb-0">
 								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
 							</p>
@@ -1623,17 +1623,22 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<TooltipTrigger>
 							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
 								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
-								{["Plan", "Act"].map((m) => (
+								{/* FenneQ labels over the underlying plan/act modes: Assist = plan, Harness = act */}
+								{[
+									{ value: "plan", label: "Assist" },
+									{ value: "act", label: "Harness" },
+								].map((m) => (
 									<div
-										aria-checked={mode === m.toLowerCase()}
+										aria-checked={mode === m.value}
 										className={cn(
 											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
-											mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
+											mode === m.value ? "text-white" : "text-input-foreground",
 										)}
+										key={m.value}
 										onMouseLeave={() => setShownTooltipMode(null)}
-										onMouseOver={() => setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")}
+										onMouseOver={() => setShownTooltipMode(m.value === "plan" ? "plan" : "act")}
 										role="switch">
-										{m}
+										{m.label}
 									</div>
 								))}
 							</SwitchContainer>
