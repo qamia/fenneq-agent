@@ -1,7 +1,8 @@
-import { HistoryIcon, PlusIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
-import { useMemo } from "react"
+import { BotIcon, CpuIcon, HistoryIcon, PlusIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
+import { type ElementType, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useFenneqMode } from "@/context/FenneqModeContext"
 import { TaskServiceClient } from "@/services/grpc-client"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 
@@ -13,10 +14,21 @@ const McpServerIcon = ({ className, size }: { className?: string; size?: number 
 	/>
 )
 
+type NavTab = {
+	id: string
+	name: string
+	tooltip: string
+	icon: ElementType
+	/** Optional CSS color applied to the button, which the icon inherits. */
+	iconColor?: string
+	navigate: () => void
+}
+
 export const Navbar = () => {
 	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMcp, navigateToChat } = useExtensionState()
+	const { mode, openFenneq } = useFenneqMode()
 
-	const SETTINGS_TABS = useMemo(
+	const SETTINGS_TABS = useMemo<NavTab[]>(
 		() => [
 			{
 				id: "chat",
@@ -30,6 +42,18 @@ export const Navbar = () => {
 							console.error("Failed to clear task:", error)
 						})
 						.finally(() => navigateToChat())
+				},
+			},
+			{
+				id: "fenneq",
+				name: "FenneQ",
+				tooltip: mode === "harness" ? "FenneQ — Harness mode" : "FenneQ — Assistant mode",
+				icon: mode === "harness" ? CpuIcon : BotIcon,
+				iconColor: `var(--fenneq-${mode}-accent)`,
+				navigate: () => {
+					// Close any other open view first, then reveal the FenneQ view.
+					navigateToChat()
+					openFenneq()
 				},
 			},
 			{
@@ -61,7 +85,7 @@ export const Navbar = () => {
 				navigate: navigateToSettings,
 			},
 		],
-		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMcp, navigateToSettings],
+		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMcp, navigateToSettings, mode, openFenneq],
 	)
 
 	return (
@@ -79,6 +103,7 @@ export const Navbar = () => {
 							key={`navbar-button-${tab.id}`}
 							onClick={() => tab.navigate()}
 							size="icon"
+							style={tab.iconColor ? { color: tab.iconColor } : undefined}
 							variant="icon">
 							<tab.icon className="stroke-1 [svg]:size-4" size={18} />
 						</Button>

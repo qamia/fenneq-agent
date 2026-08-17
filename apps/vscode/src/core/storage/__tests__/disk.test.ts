@@ -204,6 +204,11 @@ describe("disk - hooks functionality", () => {
 	})
 
 	describe("getAllHooksDirs", () => {
+		// getAllHooksDirs -> getGlobalHooksDir -> getDocumentsPath spawns
+		// PowerShell on Windows (not stubbable from here: same-module call).
+		// A cold spawn on a busy CI runner can exceed mocha's default 2s.
+		const HOOKS_DIRS_TEST_TIMEOUT_MS = 15_000
+
 		it("should include the runtime hooks directory when it exists", async () => {
 			const runtimeHooksDir = path.join(tempDir, "runtime-hooks")
 			await fs.mkdir(runtimeHooksDir, { recursive: true })
@@ -219,7 +224,7 @@ describe("disk - hooks functionality", () => {
 
 			const result = await getAllHooksDirs()
 			result.should.containEql(runtimeHooksDir)
-		})
+		}).timeout(HOOKS_DIRS_TEST_TIMEOUT_MS)
 
 		it("should not include the runtime hooks directory when it does not exist", async () => {
 			const runtimeHooksDir = path.join(tempDir, "missing-runtime-hooks")
@@ -235,7 +240,7 @@ describe("disk - hooks functionality", () => {
 
 			const result = await getAllHooksDirs()
 			result.should.not.containEql(runtimeHooksDir)
-		})
+		}).timeout(HOOKS_DIRS_TEST_TIMEOUT_MS)
 	})
 })
 
