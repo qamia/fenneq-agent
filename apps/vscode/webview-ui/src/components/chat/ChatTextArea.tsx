@@ -92,32 +92,68 @@ interface GitCommit {
 }
 
 const PLAN_MODE_COLOR = "var(--vscode-activityWarningBadge-background)"
-const ACT_MODE_COLOR = "var(--vscode-focusBorder)"
+
+// Mode tints for the segmented switch: teal whispers "advisory", accent blue says "armed"
+const ASSIST_TINT = "var(--vscode-terminal-ansiCyan, #11a8cd)"
+const HARNESS_TINT = "var(--vscode-focusBorder, #007fd4)"
 
 const SwitchContainer = styled.div<{ disabled: boolean }>`
+	position: relative;
 	display: flex;
 	align-items: center;
-	background-color: transparent;
-	border: 1px solid var(--vscode-input-border);
-	border-radius: 12px;
+	height: 20px;
+	/* Fixed width: each half must exceed the widest label ("Harness"), or the
+	   text spills over the inset chip's ring. */
+	width: 124px;
+	flex: none;
+	background: color-mix(in srgb, var(--vscode-input-foreground, #cccccc) 6%, transparent);
+	border: 1px solid var(--vscode-contrastBorder, transparent);
+	border-radius: 10px;
 	overflow: hidden;
 	cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
 	opacity: ${(props) => (props.disabled ? 0.5 : 1)};
-	transform: scale(1);
-	transform-origin: right center;
-	margin-left: 0;
 	user-select: none; // Prevent text selection
+
+	&:hover {
+		background: color-mix(in srgb, var(--vscode-input-foreground, #cccccc) 10%, transparent);
+	}
+
+	&:focus-within {
+		outline: 1px solid var(--vscode-focusBorder, #007fd4);
+		outline-offset: 1px;
+	}
 `
 
-const Slider = styled.div.withConfig({
-	shouldForwardProp: (prop) => !["isAct", "isPlan"].includes(prop),
-})<{ isAct: boolean; isPlan?: boolean }>`
+// Transparent 50%-wide carrier: the translateX(0/100%) slide math is independent
+// of the visible chip, which is painted on ::after with a 2px inset.
+const SwitchSlider = styled.div<{ $isAct: boolean }>`
 	position: absolute;
-	height: 100%;
+	top: 0;
+	left: 0;
 	width: 50%;
-	background-color: ${(props) => (props.isPlan ? PLAN_MODE_COLOR : ACT_MODE_COLOR)};
+	height: 100%;
+	pointer-events: none;
 	transition: transform 0.2s ease;
-	transform: translateX(${(props) => (props.isAct ? "100%" : "0%")});
+	transform: translateX(${({ $isAct }) => ($isAct ? "100%" : "0%")});
+
+	&::after {
+		content: "";
+		position: absolute;
+		inset: 2px;
+		border-radius: 8px;
+		transition:
+			background-color 0.2s ease,
+			box-shadow 0.2s ease;
+		background: color-mix(
+			in srgb,
+			${({ $isAct }) => ($isAct ? HARNESS_TINT : ASSIST_TINT)} ${({ $isAct }) => ($isAct ? "20%" : "16%")},
+			var(--vscode-input-background, #313131)
+		);
+		box-shadow:
+			inset 0 0 0 1px
+				color-mix(in srgb, ${({ $isAct }) => ($isAct ? HARNESS_TINT : ASSIST_TINT)} ${({ $isAct }) => ($isAct ? "50%" : "45%")}, transparent),
+			0 0 8px color-mix(in srgb, ${({ $isAct }) => ($isAct ? HARNESS_TINT : ASSIST_TINT)} ${({ $isAct }) => ($isAct ? "28%" : "20%")}, transparent);
+	}
 `
 
 const ButtonGroup = styled.div`
@@ -289,6 +325,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				...gitCommits,
 			]
 		}, [gitCommits])
+
+		// Expose the current mode to CSS so the whole panel can restyle when
+		// Harness is armed (see the body[data-mode="act"] rules in index.css)
+		useEffect(() => {
+			document.body.dataset.mode = mode
+		}, [mode])
 
 		useEffect(() => {
 			const handleClickOutside = (event: MouseEvent) => {
@@ -1609,31 +1651,43 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							</ModelContainer>
 						</ButtonGroup>
 					</div>
-					{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
+					{/* Tooltip for Assist/Harness toggle remains outside the conditional rendering */}
 					<Tooltip>
 						<TooltipContent
 							className="text-xs px-2 flex flex-col gap-1"
 							hidden={shownTooltipMode === null}
 							side="top">
-							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, FenneQ will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
+							{`In ${shownTooltipMode === "act" ? "Harness" : "Assist"} mode, FenneQ will ${shownTooltipMode === "act" ? "let the agentic platform drive the task end to end" : "gather information and advise before acting"}`}
 							<p className="text-description/80 text-xs mb-0">
 								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
 							</p>
 						</TooltipContent>
 						<TooltipTrigger>
 							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
-								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
-								{["Plan", "Act"].map((m) => (
+								{/* FenneQ labels over the underlying plan/act modes: Assist = plan, Harness = act.
+								    Sliding tinted chip: teal for Assist, accent blue for Harness. */}
+								<SwitchSlider $isAct={mode === "act"} />
+								{[
+									{ value: "plan", label: "Assist", tint: ASSIST_TINT },
+									{ value: "act", label: "Harness", tint: HARNESS_TINT },
+								].map((m) => (
 									<div
-										aria-checked={mode === m.toLowerCase()}
+										aria-checked={mode === m.value}
 										className={cn(
-											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
-											mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
+											"z-10 w-1/2 px-2 text-center text-[11px] font-medium leading-[18px] whitespace-nowrap bg-transparent transition-colors duration-150",
+											mode !== m.value &&
+												"text-(--vscode-descriptionForeground) hover:text-(--vscode-input-foreground)",
 										)}
+										key={m.value}
 										onMouseLeave={() => setShownTooltipMode(null)}
-										onMouseOver={() => setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")}
-										role="switch">
-										{m}
+										onMouseOver={() => setShownTooltipMode(m.value === "plan" ? "plan" : "act")}
+										role="switch"
+										style={
+											mode === m.value
+												? { color: `color-mix(in srgb, ${m.tint} 30%, var(--vscode-foreground, #cccccc))` }
+												: undefined
+										}>
+										{m.label}
 									</div>
 								))}
 							</SwitchContainer>

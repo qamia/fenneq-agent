@@ -20,8 +20,8 @@ e2e("Chat - can send messages and switch between modes", async ({ helper, sideba
 
 	// Makes sure the act and plan switches are working correctly
 	// Aria-checked state should be true for Act and false for Plan
-	const actButton = sidebar.getByRole("switch", { name: "Act" })
-	const planButton = sidebar.getByRole("switch", { name: "Plan" })
+	const actButton = sidebar.getByRole("switch", { name: "Harness" })
+	const planButton = sidebar.getByRole("switch", { name: "Assist" })
 
 	// Act button should be active. It doesn't have c
 	await expect(actButton).toHaveAttribute("aria-checked", "true")
