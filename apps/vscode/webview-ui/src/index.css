@@ -69,3 +69,50 @@
 		margin: calc(var(--design-unit) * 1px) 0;
 	}
 }
+
+/**
+ * Armed-panel treatment: when Harness mode is active (ChatTextArea mirrors the
+ * mode onto body[data-mode]), every panel surface takes a 6-8% accent tint and
+ * a 2px accent strip pins to the top of the panel. Text colors are untouched
+ * so contrast is preserved.
+ *
+ * The Tailwind bridge tokens (--color-*) resolve at :root, so both they and
+ * the raw --vscode-* variables are re-declared here. Originals are captured
+ * on :root first to avoid cyclic color-mix references.
+ */
+:root {
+	--qx-bg-sidebar: var(--vscode-sideBar-background, #181818);
+	--qx-bg-editor: var(--vscode-editor-background, #1f1f1f);
+	--qx-bg-input: var(--vscode-input-background, #313131);
+	--qx-bg-panel: var(--vscode-panel-background, #181818);
+}
+
+body[data-mode="act"] {
+	--vscode-sideBar-background: color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 6%, var(--qx-bg-sidebar));
+	--vscode-editor-background: color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 6%, var(--qx-bg-editor));
+	--vscode-input-background: color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 8%, var(--qx-bg-input));
+	--vscode-panel-background: color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 6%, var(--qx-bg-panel));
+	--color-background: var(--vscode-sideBar-background);
+	--color-sidebar-background: var(--vscode-sideBar-background);
+	--color-input-background: var(--vscode-input-background);
+	--color-code: var(--vscode-editor-background);
+	background-color: var(--vscode-sideBar-background);
+}
+
+body[data-mode="act"]::before {
+	content: "";
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 2px;
+	z-index: 100;
+	pointer-events: none;
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 25%, transparent),
+		var(--vscode-focusBorder, #007fd4) 35%,
+		var(--vscode-focusBorder, #007fd4) 65%,
+		color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 25%, transparent)
+	);
+}

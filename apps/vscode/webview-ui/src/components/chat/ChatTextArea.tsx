@@ -92,20 +92,68 @@ interface GitCommit {
 }
 
 const PLAN_MODE_COLOR = "var(--vscode-activityWarningBadge-background)"
-const ACT_MODE_COLOR = "var(--vscode-focusBorder)"
+
+// Mode tints for the segmented switch: teal whispers "advisory", accent blue says "armed"
+const ASSIST_TINT = "var(--vscode-terminal-ansiCyan, #11a8cd)"
+const HARNESS_TINT = "var(--vscode-focusBorder, #007fd4)"
 
 const SwitchContainer = styled.div<{ disabled: boolean }>`
-	display: inline-flex;
+	position: relative;
+	display: flex;
 	align-items: center;
-	gap: 2px;
-	padding: 2px;
-	background-color: transparent;
-	border: 1px solid var(--vscode-input-border);
-	border-radius: 999px;
+	height: 20px;
+	/* Fixed width: each half must exceed the widest label ("Harness"), or the
+	   text spills over the inset chip's ring. */
+	width: 124px;
+	flex: none;
+	background: color-mix(in srgb, var(--vscode-input-foreground, #cccccc) 6%, transparent);
+	border: 1px solid var(--vscode-contrastBorder, transparent);
+	border-radius: 10px;
+	overflow: hidden;
 	cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
 	opacity: ${(props) => (props.disabled ? 0.5 : 1)};
-	margin-left: 0;
 	user-select: none; // Prevent text selection
+
+	&:hover {
+		background: color-mix(in srgb, var(--vscode-input-foreground, #cccccc) 10%, transparent);
+	}
+
+	&:focus-within {
+		outline: 1px solid var(--vscode-focusBorder, #007fd4);
+		outline-offset: 1px;
+	}
+`
+
+// Transparent 50%-wide carrier: the translateX(0/100%) slide math is independent
+// of the visible chip, which is painted on ::after with a 2px inset.
+const SwitchSlider = styled.div<{ $isAct: boolean }>`
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 50%;
+	height: 100%;
+	pointer-events: none;
+	transition: transform 0.2s ease;
+	transform: translateX(${({ $isAct }) => ($isAct ? "100%" : "0%")});
+
+	&::after {
+		content: "";
+		position: absolute;
+		inset: 2px;
+		border-radius: 8px;
+		transition:
+			background-color 0.2s ease,
+			box-shadow 0.2s ease;
+		background: color-mix(
+			in srgb,
+			${({ $isAct }) => ($isAct ? HARNESS_TINT : ASSIST_TINT)} ${({ $isAct }) => ($isAct ? "20%" : "16%")},
+			var(--vscode-input-background, #313131)
+		);
+		box-shadow:
+			inset 0 0 0 1px
+				color-mix(in srgb, ${({ $isAct }) => ($isAct ? HARNESS_TINT : ASSIST_TINT)} ${({ $isAct }) => ($isAct ? "50%" : "45%")}, transparent),
+			0 0 8px color-mix(in srgb, ${({ $isAct }) => ($isAct ? HARNESS_TINT : ASSIST_TINT)} ${({ $isAct }) => ($isAct ? "28%" : "20%")}, transparent);
+	}
 `
 
 const ButtonGroup = styled.div`
@@ -277,6 +325,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				...gitCommits,
 			]
 		}, [gitCommits])
+
+		// Expose the current mode to CSS so the whole panel can restyle when
+		// Harness is armed (see the body[data-mode="act"] rules in index.css)
+		useEffect(() => {
+			document.body.dataset.mode = mode
+		}, [mode])
 
 		useEffect(() => {
 			const handleClickOutside = (event: MouseEvent) => {
@@ -1611,22 +1665,28 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<TooltipTrigger>
 							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
 								{/* FenneQ labels over the underlying plan/act modes: Assist = plan, Harness = act.
-								    Segmented pill: each label keeps its natural width; the active one is a colored chip. */}
+								    Sliding tinted chip: teal for Assist, accent blue for Harness. */}
+								<SwitchSlider $isAct={mode === "act"} />
 								{[
-									{ value: "plan", label: "Assist", activeBg: PLAN_MODE_COLOR },
-									{ value: "act", label: "Harness", activeBg: ACT_MODE_COLOR },
+									{ value: "plan", label: "Assist", tint: ASSIST_TINT },
+									{ value: "act", label: "Harness", tint: HARNESS_TINT },
 								].map((m) => (
 									<div
 										aria-checked={mode === m.value}
 										className={cn(
-											"pt-0.5 pb-px px-2.5 text-xs text-center rounded-full transition-colors duration-150",
-											mode === m.value ? "text-white" : "text-input-foreground opacity-70 hover:opacity-100",
+											"z-10 w-1/2 px-2 text-center text-[11px] font-medium leading-[18px] whitespace-nowrap bg-transparent transition-colors duration-150",
+											mode !== m.value &&
+												"text-(--vscode-descriptionForeground) hover:text-(--vscode-input-foreground)",
 										)}
 										key={m.value}
 										onMouseLeave={() => setShownTooltipMode(null)}
 										onMouseOver={() => setShownTooltipMode(m.value === "plan" ? "plan" : "act")}
 										role="switch"
-										style={{ backgroundColor: mode === m.value ? m.activeBg : "transparent" }}>
+										style={
+											mode === m.value
+												? { color: `color-mix(in srgb, ${m.tint} 30%, var(--vscode-foreground, #cccccc))` }
+												: undefined
+										}>
 										{m.label}
 									</div>
 								))}
