@@ -95,29 +95,17 @@ const PLAN_MODE_COLOR = "var(--vscode-activityWarningBadge-background)"
 const ACT_MODE_COLOR = "var(--vscode-focusBorder)"
 
 const SwitchContainer = styled.div<{ disabled: boolean }>`
-	display: flex;
+	display: inline-flex;
 	align-items: center;
+	gap: 2px;
+	padding: 2px;
 	background-color: transparent;
 	border: 1px solid var(--vscode-input-border);
-	border-radius: 12px;
-	overflow: hidden;
+	border-radius: 999px;
 	cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
 	opacity: ${(props) => (props.disabled ? 0.5 : 1)};
-	transform: scale(1);
-	transform-origin: right center;
 	margin-left: 0;
 	user-select: none; // Prevent text selection
-`
-
-const Slider = styled.div.withConfig({
-	shouldForwardProp: (prop) => !["isAct", "isPlan"].includes(prop),
-})<{ isAct: boolean; isPlan?: boolean }>`
-	position: absolute;
-	height: 100%;
-	width: 50%;
-	background-color: ${(props) => (props.isPlan ? PLAN_MODE_COLOR : ACT_MODE_COLOR)};
-	transition: transform 0.2s ease;
-	transform: translateX(${(props) => (props.isAct ? "100%" : "0%")});
 `
 
 const ButtonGroup = styled.div`
@@ -1622,22 +1610,23 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						</TooltipContent>
 						<TooltipTrigger>
 							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
-								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
-								{/* FenneQ labels over the underlying plan/act modes: Assist = plan, Harness = act */}
+								{/* FenneQ labels over the underlying plan/act modes: Assist = plan, Harness = act.
+								    Segmented pill: each label keeps its natural width; the active one is a colored chip. */}
 								{[
-									{ value: "plan", label: "Assist" },
-									{ value: "act", label: "Harness" },
+									{ value: "plan", label: "Assist", activeBg: PLAN_MODE_COLOR },
+									{ value: "act", label: "Harness", activeBg: ACT_MODE_COLOR },
 								].map((m) => (
 									<div
 										aria-checked={mode === m.value}
 										className={cn(
-											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
-											mode === m.value ? "text-white" : "text-input-foreground",
+											"pt-0.5 pb-px px-2.5 text-xs text-center rounded-full transition-colors duration-150",
+											mode === m.value ? "text-white" : "text-input-foreground opacity-70 hover:opacity-100",
 										)}
 										key={m.value}
 										onMouseLeave={() => setShownTooltipMode(null)}
 										onMouseOver={() => setShownTooltipMode(m.value === "plan" ? "plan" : "act")}
-										role="switch">
+										role="switch"
+										style={{ backgroundColor: mode === m.value ? m.activeBg : "transparent" }}>
 										{m.label}
 									</div>
 								))}
